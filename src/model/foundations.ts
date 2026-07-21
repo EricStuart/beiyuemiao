@@ -37,10 +37,13 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   lower.position.y = 0.325;
   const middle = box(width + 1.1, 0.62, depth + 1.1, materials.stone);
   middle.position.y = 0.96;
-  const upper = box(width, 0.88, depth, materials.brick);
-  upper.position.y = 1.71;
-  const cap = box(width + 0.35, 0.18, depth + 0.35, materials.stone);
-  cap.position.y = data.platformHeight - 0.09;
+  const capHeight = 0.18;
+  const upperBottom = 1.27;
+  const upperTop = data.platformHeight - capHeight;
+  const upper = box(width, upperTop - upperBottom, depth, materials.brick);
+  upper.position.y = (upperBottom + upperTop) / 2;
+  const cap = box(width + 0.35, capHeight, depth + 0.35, materials.stone);
+  cap.position.y = upperTop + capHeight / 2;
   group.add(lower, middle, upper, cap);
 
   const stairWidth = 10.8;

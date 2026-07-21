@@ -15,10 +15,10 @@ import {
 } from 'three';
 import type { BuildingData } from '../data/building';
 import type { BuildingMaterials } from './materials';
-import { sampleRaisedEaveProfile } from './roof-profile';
+import { evaluateRaisedEaveHeight, evaluateWingLift, sampleRaisedEaveProfile } from './roof-profile';
 import type { QualityLevel } from './types';
 
-interface RoofDimensions {
+export interface RoofDimensions {
   width: number;
   depth: number;
   ridgeLength: number;
@@ -29,13 +29,14 @@ interface RoofDimensions {
 }
 
 function profileY(t: number, dimensions: RoofDimensions): number {
-  const rise = dimensions.ridgeY - dimensions.baseY;
-  return dimensions.baseY + dimensions.eaveLift + (rise - dimensions.eaveLift) * (0.18 * t + 0.82 * t * t);
-}
-
-function wingLift(positionRatio: number, t: number): number {
-  const edge = Math.max(0, (Math.abs(positionRatio) - 0.64) / 0.36);
-  return edge * edge * (1 - t) * 0.72;
+  return dimensions.baseY + evaluateRaisedEaveHeight(
+    {
+      run: dimensions.depth / 2,
+      rise: dimensions.ridgeY - dimensions.baseY,
+      eaveLift: dimensions.eaveLift,
+    },
+    t,
+  );
 }
 
 function createRoofSurface(dimensions: RoofDimensions, material: Material, segments: number): Mesh {
@@ -66,7 +67,7 @@ function createRoofSurface(dimensions: RoofDimensions, material: Material, segme
           z = -extentZ + 2 * extentZ * u;
           ratio = z / Math.max(extentZ, 0.001);
         }
-        vertices.push(x, profileY(t, dimensions) + wingLift(ratio, t), z);
+        vertices.push(x, profileY(t, dimensions) + evaluateWingLift(ratio, t), z);
       }
     }
     for (let row = 0; row < segments; row += 1) {
@@ -117,10 +118,10 @@ function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, gree
         const x2 = ratio * (dimensions.width / 2 + (dimensions.ridgeLength / 2 - dimensions.width / 2) * t2);
         positions.push(
           x1,
-          dimensions.baseY + current.y + wingLift(ratio, t1) + 0.05,
+          dimensions.baseY + current.y + evaluateWingLift(ratio, t1) + 0.05,
           face * (dimensions.depth / 2 - current.x),
           x2,
-          dimensions.baseY + next.y + wingLift(ratio, t2) + 0.05,
+          dimensions.baseY + next.y + evaluateWingLift(ratio, t2) + 0.05,
           face * (dimensions.depth / 2 - next.x),
         );
       }
@@ -138,11 +139,32 @@ function createRidgeTube(points: Vector3[], radius: number, material: Material):
   return new Mesh(new TubeGeometry(new CatmullRomCurve3(points), 20, radius, 8, false), material);
 }
 
+export function createHipRidgePoints(
+  dimensions: RoofDimensions,
+  xSide: number,
+  zSide: number,
+  surfaceOffset = 0.16,
+  segments = 8,
+): Vector3[] {
+  const halfWidth = dimensions.width / 2;
+  const halfDepth = dimensions.depth / 2;
+  const ridgeHalf = dimensions.ridgeLength / 2;
+
+  return Array.from({ length: segments + 1 }, (_, index) => {
+    const t = 1 - index / segments;
+    const extentX = halfWidth + (ridgeHalf - halfWidth) * t;
+    const extentZ = halfDepth * (1 - t);
+    return new Vector3(
+      xSide * extentX,
+      profileY(t, dimensions) + evaluateWingLift(1, t) + surfaceOffset,
+      zSide * extentZ,
+    );
+  });
+}
+
 function addRidges(group: Group, dimensions: RoofDimensions, materials: BuildingMaterials): void {
   const ridgeY = dimensions.ridgeY + 0.25;
   const ridgeHalf = dimensions.ridgeLength / 2;
-  const halfWidth = dimensions.width / 2;
-  const halfDepth = dimensions.depth / 2;
   const main = new Mesh(new CylinderGeometry(0.3, 0.36, dimensions.ridgeLength + 1.2, 12), materials.glazedGreen);
   main.rotation.z = Math.PI / 2;
   main.position.set(0, ridgeY, 0);
@@ -151,11 +173,7 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
   for (const xSide of [-1, 1]) {
     for (const zSide of [-1, 1]) {
       const hip = createRidgeTube(
-        [
-          new Vector3(xSide * ridgeHalf, ridgeY, 0),
-          new Vector3(xSide * (ridgeHalf + halfWidth) * 0.52, dimensions.baseY + (ridgeY - dimensions.baseY) * 0.48 + 0.45, zSide * halfDepth * 0.5),
-          new Vector3(xSide * halfWidth, dimensions.baseY + dimensions.eaveLift + 0.65, zSide * halfDepth),
-        ],
+        createHipRidgePoints(dimensions, xSide, zSide),
         0.22,
         materials.glazedGreen,
       );
