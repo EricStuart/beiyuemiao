@@ -30,6 +30,16 @@ describe('hip ridge alignment', () => {
     });
   });
 
+  it('places one muted green diamond on the centre of the upper front slope', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    const upper = roofs.children[1]!;
+    const diamond = upper.getObjectByName('二层中央菱形绿瓦');
+    expect(diamond).toBeDefined();
+    expect(diamond!.userData.kind).toBe('green-diamond-tiles');
+    expect(diamond!.userData.face).toBe('front');
+    expect(diamond!.userData.instanceCount).toBeGreaterThan(20);
+  });
+
   it('keeps every diagonal ridge sample seated on the roof tiles', () => {
     const dimensions: RoofDimensions = {
       width: 61.8,

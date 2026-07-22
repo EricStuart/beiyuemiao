@@ -231,6 +231,13 @@ function createInstancedTiles(
   return mesh;
 }
 
+function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
+  if (side !== 'front') return false;
+  const centredT = Math.abs(t - 0.46) / 0.22;
+  const centredX = Math.abs(ratio) / 0.18;
+  return centredT + centredX <= 1;
+}
+
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
   const count = quality === 'high' ? 54 : quality === 'medium' ? 38 : 24;
   const profileSegments = quality === 'low' ? 8 : 12;
@@ -513,7 +520,12 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
   }
 }
 
-function createRoofLevel(dimensions: RoofDimensions, materials: BuildingMaterials, quality: QualityLevel): Group {
+function createRoofLevel(
+  dimensions: RoofDimensions,
+  materials: BuildingMaterials,
+  quality: QualityLevel,
+  greenDiamond = false,
+): Group {
   const group = new Group();
   group.name = dimensions.name;
   group.userData.roofForm = dimensions.ridgeStyle === 'truncated' ? 'truncated-hip' : 'hip';
@@ -521,7 +533,19 @@ function createRoofLevel(dimensions: RoofDimensions, materials: BuildingMaterial
   group.userData.ridgeY = dimensions.ridgeY;
   group.add(createRoofSurface(dimensions, materials.tile, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
   const placements = collectTilePlacements(dimensions, quality);
-  group.add(createInstancedTiles(placements, materials.tile, '坡面筒瓦覆盖', 'roof-tile-covering'));
+  const yellowPlacements = greenDiamond ? placements.filter((placement) => !isGreenDiamond(placement)) : placements;
+  group.add(createInstancedTiles(yellowPlacements, materials.tile, '坡面筒瓦覆盖', 'roof-tile-covering'));
+  if (greenDiamond) {
+    const greenPlacements = placements.filter(isGreenDiamond);
+    const diamond = createInstancedTiles(
+      greenPlacements,
+      materials.diamondTile,
+      '二层中央菱形绿瓦',
+      'green-diamond-tiles',
+    );
+    diamond.userData.face = 'front';
+    group.add(diamond);
+  }
   group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
 
   addRidges(group, dimensions, materials);
@@ -562,6 +586,7 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
       },
     materials,
     quality,
+    true,
   );
   upperRoof.userData.frontEaveZ = getUpperRoofFrontEaveZ(data);
   roofs.add(upperRoof);
