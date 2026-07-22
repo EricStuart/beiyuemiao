@@ -21,6 +21,8 @@ import type { InspectionLayer } from '../model/types';
 import type { LightingMode } from '../runtime/viewer';
 import type { ViewPreset } from '../runtime/view-presets';
 
+const REFERENCE_IMAGE_URL = `${import.meta.env.BASE_URL}reference/dening-hall-front.jpg`;
+
 export interface ViewerControls {
   setLayer: (layer: InspectionLayer) => void;
   setViewPreset: (preset: ViewPreset) => void;
@@ -96,7 +98,7 @@ export function createAppUI(root: HTMLElement, controls: ViewerControls): AppUI 
       </div>
       <div class="drawer-scroll">
         <figure class="reference-figure">
-          <img src="/reference/dening-hall-front.jpg" alt="用户提供的德宁之殿正面照片" />
+          <img src="${REFERENCE_IMAGE_URL}" alt="用户提供的德宁之殿正面照片" />
           <figcaption>正立面参考 · 用户提供</figcaption>
         </figure>
 
