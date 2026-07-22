@@ -84,7 +84,7 @@ describe('lower timber frame', () => {
         doorParts.push(child.name);
       }
     });
-    expect(doorParts).toHaveLength(0);
+    expect(doorParts).toHaveLength(12);
   });
 
   it('builds a front-open C-shaped inner enclosure on the platform', () => {

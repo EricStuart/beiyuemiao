@@ -8,6 +8,7 @@ import {
   type Material,
 } from 'three';
 import type { BuildingData } from '../data/building';
+import { createDoorPair, type DoorLeafBinding } from './doors';
 import { createAxisCoordinates } from './grid';
 import type { BuildingMaterials } from './materials';
 import {
@@ -19,6 +20,10 @@ import {
 export interface TimberFrameResult {
   grid: Group;
   brackets: Group;
+  doors: {
+    front: DoorLeafBinding[];
+    rear: DoorLeafBinding[];
+  };
 }
 
 type EnclosureSide = 'front' | 'rear' | 'left' | 'right';
@@ -359,6 +364,43 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   }
   grid.add(lowerEnclosure);
 
+  const doors: TimberFrameResult['doors'] = { front: [], rear: [] };
+  for (let bay = 1; bay <= 5; bay += 1) {
+    const left = hallXAxis[bay];
+    const right = hallXAxis[bay + 1];
+    if (left === undefined || right === undefined) continue;
+    const pair = createDoorPair({
+      side: 'front',
+      bay,
+      left,
+      right,
+      z: hallFront - 0.05,
+      platformTop,
+      height: enclosureHeight,
+      material: materials.door,
+      timberMaterial: materials.darkTimber,
+    });
+    grid.add(pair.group);
+    doors.front.push(...pair.leaves);
+  }
+  const rearLeft = hallXAxis[3];
+  const rearRight = hallXAxis[4];
+  if (rearLeft !== undefined && rearRight !== undefined) {
+    const pair = createDoorPair({
+      side: 'rear',
+      bay: 3,
+      left: rearLeft,
+      right: rearRight,
+      z: hallRear + 0.05,
+      platformTop,
+      height: enclosureHeight,
+      material: materials.door,
+      timberMaterial: materials.darkTimber,
+    });
+    grid.add(pair.group);
+    doors.rear.push(...pair.leaves);
+  }
+
   const innerEnclosure = new Group();
   innerEnclosure.name = '内槽 C 字形围护';
   const innerRearZ = zAxis[2];
@@ -534,5 +576,5 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   interiorFloor.position.y = platformTop + 0.06;
   grid.add(interiorFloor);
 
-  return { grid, brackets };
+  return { grid, brackets, doors };
 }
