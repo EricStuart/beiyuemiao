@@ -332,15 +332,19 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   const hallLeft = hallXAxis[0] ?? 0;
   const hallRight = hallXAxis.at(-1) ?? 0;
   const enclosureHeight = data.corridorColumnHeight.value;
+  const frontOpeningBays = new Set([1, 2, 3, 4, 5]);
+  const rearOpeningBay = 3;
 
   for (let bay = 0; bay < hallXAxis.length - 1; bay += 1) {
     const left = hallXAxis[bay];
     const right = hallXAxis[bay + 1];
     if (left === undefined || right === undefined) continue;
-    if (bay !== 3) {
+    if (!frontOpeningBays.has(bay)) {
       addEnclosurePanel(lowerEnclosure, 'front', bay, left, right, hallFront - 0.05, platformTop, enclosureHeight, materials);
     }
-    addEnclosurePanel(lowerEnclosure, 'rear', bay, left, right, hallRear + 0.05, platformTop, enclosureHeight, materials);
+    if (bay !== rearOpeningBay) {
+      addEnclosurePanel(lowerEnclosure, 'rear', bay, left, right, hallRear + 0.05, platformTop, enclosureHeight, materials);
+    }
   }
 
   for (let bay = 0; bay < hallZAxis.length - 1; bay += 1) {
@@ -425,7 +429,7 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     plaqueBounds = new Box3().setFromObject(plaque);
   }
   const lowerRoofSurfaceY = getLowerRoofSurfaceYAtFrontZ(data, plaqueBounds.min.z);
-  plaque.position.y += lowerRoofSurfaceY + 0.05 - plaqueBounds.min.y;
+  plaque.position.y += lowerRoofSurfaceY + 0.06 - plaqueBounds.min.y;
   plaqueBounds = new Box3().setFromObject(plaque);
   const plaqueTopY = plaqueBounds.max.y;
   plaque.userData.bottomY = plaqueBounds.min.y;

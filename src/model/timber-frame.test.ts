@@ -54,7 +54,7 @@ describe('lower timber frame', () => {
     expect(new Box3().setFromObject(lowerBracket!).max.y).toBeLessThan(DENING_HALL.lowerEaveHeight);
   });
 
-  it('encloses all four sides while leaving the central front bay open', () => {
+  it('encloses all four sides with five front and one rear openings', () => {
     const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const panels: Mesh[] = [];
     grid.traverse((child) => {
@@ -67,12 +67,24 @@ describe('lower timber frame', () => {
       sideCounts[side] += 1;
     });
     const frontPanels = panels.filter((panel) => panel.userData.side === 'front');
+    const rearPanels = panels.filter((panel) => panel.userData.side === 'rear');
 
-    expect(sideCounts).toEqual({ front: 6, rear: 7, left: 4, right: 4 });
-    expect(frontPanels.some((panel) => panel.userData.bay === 3)).toBe(false);
+    expect(sideCounts).toEqual({ front: 2, rear: 6, left: 4, right: 4 });
+    expect(frontPanels.map((panel) => panel.userData.bay)).toEqual([0, 6]);
+    expect(rearPanels.map((panel) => panel.userData.bay)).toEqual([0, 1, 2, 4, 5, 6]);
     panels.forEach((panel) => {
       expect(new Box3().setFromObject(panel).min.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
     });
+
+    const doorParts: string[] = [];
+    grid.traverse((child) => {
+      if (child.userData.kind === 'door-leaf'
+        || child.name.includes('门扇')
+        || child.name.includes('门框')) {
+        doorParts.push(child.name);
+      }
+    });
+    expect(doorParts).toHaveLength(0);
   });
 
   it('places the 德宁之殿 plaque at the centre of the upper front facade', () => {
