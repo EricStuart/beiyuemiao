@@ -24,6 +24,10 @@ export interface BuildingData {
   footprintArea: SourcedNumber;
   planWidth: SourcedNumber;
   planDepth: SourcedNumber;
+  platformWidth: SourcedNumber;
+  platformDepth: SourcedNumber;
+  terraceWidth: SourcedNumber;
+  terraceDepth: SourcedNumber;
   corridorColumnHeight: SourcedNumber;
   upperColumnHeight: SourcedNumber;
   platformHeight: number;
@@ -62,16 +66,40 @@ export const DENING_HALL: BuildingData = {
     note: '公开资料所称占地面积，口径可能包含出檐或台基',
   },
   planWidth: {
-    value: 52.8,
+    value: 44.03,
     unit: 'm',
-    evidence: 'inferred',
-    note: '由占地信息、正立面照片和九间柱网权重拟合，非实测',
+    evidence: 'secondary',
+    note: '用户提供的德宁之殿平面测绘图外檐柱网总跨度',
   },
   planDepth: {
-    value: 38.06,
+    value: 25.98,
     unit: 'm',
-    evidence: 'inferred',
-    note: '由占地信息、侧向照片和六进柱网权重拟合，非实测',
+    evidence: 'secondary',
+    note: '用户提供的德宁之殿平面测绘图外檐柱网总跨度',
+  },
+  platformWidth: {
+    value: 48.03,
+    unit: 'm',
+    evidence: 'secondary',
+    note: '用户提供文字摘录中的台基东西长',
+  },
+  platformDepth: {
+    value: 31.77,
+    unit: 'm',
+    evidence: 'secondary',
+    note: '用户提供文字摘录中的台基南北宽',
+  },
+  terraceWidth: {
+    value: 25.10,
+    unit: 'm',
+    evidence: 'secondary',
+    note: '用户提供文字摘录中的月台东西长',
+  },
+  terraceDepth: {
+    value: 19.86,
+    unit: 'm',
+    evidence: 'secondary',
+    note: '用户提供文字摘录中的月台南北宽',
   },
   corridorColumnHeight: {
     value: 4.89,
@@ -123,6 +151,11 @@ export const DENING_HALL: BuildingData = {
       label: '用户提供正面照片',
       url: '/reference/dening-hall-front.jpg',
       kind: 'reference',
+    },
+    {
+      label: '用户提供平面测绘图与尺寸摘录',
+      url: '/reference/dening-hall-plan-survey.png',
+      kind: 'secondary',
     },
   ],
 };

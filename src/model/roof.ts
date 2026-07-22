@@ -29,7 +29,9 @@ export interface RoofDimensions {
   ridgeY: number;
   eaveLift: number;
   name: string;
-  ridgeStyle?: 'simple' | 'chiwen';
+  topWidth?: number;
+  topDepth?: number;
+  ridgeStyle?: 'truncated' | 'simple' | 'chiwen';
 }
 
 function profileY(t: number, dimensions: RoofDimensions): number {
@@ -48,15 +50,16 @@ function createRoofSurface(dimensions: RoofDimensions, material: Material, segme
   const indices: number[] = [];
   const halfWidth = dimensions.width / 2;
   const halfDepth = dimensions.depth / 2;
-  const ridgeHalf = dimensions.ridgeLength / 2;
+  const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
+  const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
   const across = Math.max(12, Math.round(segments * 1.6));
 
   const addSurface = (side: 'front' | 'back' | 'left' | 'right'): void => {
     const baseIndex = vertices.length / 3;
     for (let row = 0; row <= segments; row += 1) {
       const t = row / segments;
-      const extentX = halfWidth + (ridgeHalf - halfWidth) * t;
-      const extentZ = halfDepth * (1 - t);
+      const extentX = halfWidth + (topHalfWidth - halfWidth) * t;
+      const extentZ = halfDepth + (topHalfDepth - halfDepth) * t;
       for (let column = 0; column <= across; column += 1) {
         const u = column / across;
         let x: number;
@@ -109,6 +112,10 @@ function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, gree
     profileSegments,
   );
   const positions: number[] = [];
+  const halfWidth = dimensions.width / 2;
+  const halfDepth = dimensions.depth / 2;
+  const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
+  const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
   for (const face of [-1, 1]) {
     for (let index = 0; index <= count; index += 1) {
       const ratio = -1 + (2 * index) / count;
@@ -118,15 +125,17 @@ function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, gree
         if (!current || !next) continue;
         const t1 = current.x / (dimensions.depth / 2);
         const t2 = next.x / (dimensions.depth / 2);
-        const x1 = ratio * (dimensions.width / 2 + (dimensions.ridgeLength / 2 - dimensions.width / 2) * t1);
-        const x2 = ratio * (dimensions.width / 2 + (dimensions.ridgeLength / 2 - dimensions.width / 2) * t2);
+        const extentX1 = halfWidth + (topHalfWidth - halfWidth) * t1;
+        const extentX2 = halfWidth + (topHalfWidth - halfWidth) * t2;
+        const extentZ1 = halfDepth + (topHalfDepth - halfDepth) * t1;
+        const extentZ2 = halfDepth + (topHalfDepth - halfDepth) * t2;
         positions.push(
-          x1,
+          ratio * extentX1,
           dimensions.baseY + current.y + evaluateWingLift(ratio, t1) + 0.05,
-          face * (dimensions.depth / 2 - current.x),
-          x2,
+          face * extentZ1,
+          ratio * extentX2,
           dimensions.baseY + next.y + evaluateWingLift(ratio, t2) + 0.05,
-          face * (dimensions.depth / 2 - next.x),
+          face * extentZ2,
         );
       }
     }
@@ -152,12 +161,13 @@ export function createHipRidgePoints(
 ): Vector3[] {
   const halfWidth = dimensions.width / 2;
   const halfDepth = dimensions.depth / 2;
-  const ridgeHalf = dimensions.ridgeLength / 2;
+  const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
+  const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
 
   return Array.from({ length: segments + 1 }, (_, index) => {
-    const t = 1 - index / segments;
-    const extentX = halfWidth + (ridgeHalf - halfWidth) * t;
-    const extentZ = halfDepth * (1 - t);
+    const t = index / segments;
+    const extentX = halfWidth + (topHalfWidth - halfWidth) * t;
+    const extentZ = halfDepth + (topHalfDepth - halfDepth) * t;
     return new Vector3(
       xSide * extentX,
       profileY(t, dimensions) + evaluateWingLift(1, t) + surfaceOffset,
@@ -217,10 +227,14 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
 function addRidges(group: Group, dimensions: RoofDimensions, materials: BuildingMaterials): void {
   const ridgeY = dimensions.ridgeY + 0.25;
   const ridgeHalf = dimensions.ridgeLength / 2;
-  const main = new Mesh(new CylinderGeometry(0.3, 0.36, dimensions.ridgeLength + 1.2, 12), materials.glazedGreen);
-  main.rotation.z = Math.PI / 2;
-  main.position.set(0, ridgeY, 0);
-  group.add(main);
+  if (dimensions.ridgeStyle !== 'truncated') {
+    const main = new Mesh(new CylinderGeometry(0.3, 0.36, dimensions.ridgeLength + 1.2, 12), materials.glazedGreen);
+    main.name = `${dimensions.name}主脊`;
+    main.userData.kind = 'main-ridge';
+    main.rotation.z = Math.PI / 2;
+    main.position.set(0, ridgeY, 0);
+    group.add(main);
+  }
 
   if (dimensions.ridgeStyle === 'chiwen') {
     const ridgeBand = new Mesh(
@@ -250,11 +264,14 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
         0.22,
         materials.glazedGreen,
       );
+      hip.name = `${dimensions.name}角脊`;
+      hip.userData.kind = 'hip-ridge';
       group.add(hip);
     }
   }
 
   for (const side of [-1, 1]) {
+    if (dimensions.ridgeStyle === 'truncated') continue;
     if (dimensions.ridgeStyle === 'chiwen') {
       const chiwen = createChiwen(side, materials);
       chiwen.position.set(side * (ridgeHalf + 0.32), ridgeY + 0.22, 0);
@@ -276,6 +293,7 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
 function createRoofLevel(dimensions: RoofDimensions, materials: BuildingMaterials, quality: QualityLevel): Group {
   const group = new Group();
   group.name = dimensions.name;
+  group.userData.roofForm = dimensions.ridgeStyle === 'truncated' ? 'truncated-hip' : 'hip';
   group.add(createRoofSurface(dimensions, materials.tile, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
   group.add(createTileLines(dimensions, quality, false));
 
@@ -292,10 +310,13 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
         name: '下檐庑殿顶',
         width: data.planWidth.value + 9,
         depth: data.planDepth.value + 9,
-        ridgeLength: data.planWidth.value * 0.69,
+        ridgeLength: data.planWidth.value * 0.73 + 1,
+        topWidth: data.planWidth.value * 0.73 + 1,
+        topDepth: data.planDepth.value * 0.62 + 1,
         baseY: 8.72,
-        ridgeY: 13.8,
+        ridgeY: 13.05,
         eaveLift: 0.58,
+        ridgeStyle: 'truncated',
       },
       materials,
       quality,
@@ -308,7 +329,7 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
         width: data.planWidth.value * 0.82 + 6.5,
         depth: data.planDepth.value * 0.68 + 7,
         ridgeLength: data.planWidth.value * 0.48,
-        baseY: 16.55,
+        baseY: 16.0,
         ridgeY: data.upperRidgeHeight,
         eaveLift: 0.72,
         ridgeStyle: 'chiwen',

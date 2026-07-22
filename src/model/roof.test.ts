@@ -19,7 +19,7 @@ describe('hip ridge alignment', () => {
     const points = createHipRidgePoints(dimensions, 1, 1, 0.16);
 
     points.forEach((point, index) => {
-      const t = 1 - index / (points.length - 1);
+      const t = index / (points.length - 1);
       const surfaceY = dimensions.baseY + evaluateRaisedEaveHeight(
         {
           run: dimensions.depth / 2,
@@ -32,19 +32,53 @@ describe('hip ridge alignment', () => {
     });
   });
 
-  it('keeps only the main ridge cylinder on each roof level', () => {
+  it('uses a truncated lower roof with four closed hip ridges and no main ridge', () => {
     const roofs = createRoofs(
       DENING_HALL,
       createBuildingMaterials(DENING_HALL),
       'high',
     );
-
-    roofs.children.forEach((roofLevel) => {
-      const directCylinders = roofLevel.children.filter(
-        (child) => child instanceof Mesh && child.geometry instanceof CylinderGeometry,
-      );
-      expect(directCylinders).toHaveLength(1);
+    const lower = roofs.children.find((child) => child.name === '下檐庑殿顶')!;
+    const mainRidges: Object3D[] = [];
+    const hipRidges: Object3D[] = [];
+    lower.traverse((child) => {
+      if (child.userData.kind === 'main-ridge') mainRidges.push(child);
+      if (child.userData.kind === 'hip-ridge') hipRidges.push(child);
     });
+
+    expect(mainRidges).toHaveLength(0);
+    expect(hipRidges).toHaveLength(4);
+    expect(lower.userData.roofForm).toBe('truncated-hip');
+  });
+
+  it('keeps one main ridge on the upper roof only', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
+    const directCylinders = upper.children.filter(
+      (child) => child instanceof Mesh && child.geometry instanceof CylinderGeometry,
+    );
+    expect(directCylinders).toHaveLength(1);
+    expect(directCylinders[0]!.userData.kind).toBe('main-ridge');
+  });
+
+  it('ends truncated hip ridges at the rectangular upper boundary', () => {
+    const dimensions: RoofDimensions = {
+      width: 53.03,
+      depth: 34.98,
+      ridgeLength: 32.94,
+      topWidth: 32.94,
+      topDepth: 17.1,
+      baseY: 8.72,
+      ridgeY: 13.05,
+      eaveLift: 0.58,
+      ridgeStyle: 'truncated',
+      name: 'test truncated roof',
+    };
+    const points = createHipRidgePoints(dimensions, 1, 1, 0.16);
+    const last = points.at(-1)!;
+    expect(last.x).toBeCloseTo(dimensions.topWidth! / 2, 5);
+    expect(last.z).toBeCloseTo(dimensions.topDepth! / 2, 5);
+    expect(last.y).toBeGreaterThan(dimensions.baseY);
   });
 
   it('seats two mirrored chiwen ornaments on the upper main ridge', () => {

@@ -17,6 +17,22 @@ describe('Dening Hall grid', () => {
     expect(DENING_HALL.totalHeight.evidence).toBe('documented');
   });
 
+  it('uses the measured column grid and platform dimensions', () => {
+    expect(DENING_HALL.planWidth.value).toBeCloseTo(44.03, 5);
+    expect(DENING_HALL.planDepth.value).toBeCloseTo(25.98, 5);
+    expect(DENING_HALL.platformWidth.value).toBeCloseTo(48.03, 5);
+    expect(DENING_HALL.platformDepth.value).toBeCloseTo(31.77, 5);
+    expect(DENING_HALL.terraceWidth.value).toBeCloseTo(25.10, 5);
+    expect(DENING_HALL.terraceDepth.value).toBeCloseTo(19.86, 5);
+
+    const x = createAxisCoordinates(DENING_HALL.bayWidths, DENING_HALL.planWidth.value);
+    const z = createAxisCoordinates(DENING_HALL.depthWidths, DENING_HALL.planDepth.value);
+    expect(x.at(-1)! - x[0]!).toBeCloseTo(44.03, 5);
+    expect(z.at(-1)! - z[0]!).toBeCloseTo(25.98, 5);
+    expect(x[1]! - x[0]!).toBeCloseTo(x.at(-1)! - x.at(-2)!, 5);
+    expect(z[1]! - z[0]!).toBeCloseTo(z.at(-1)! - z.at(-2)!, 5);
+  });
+
   it('rejects invalid bay counts', () => {
     expect(() => validateBuildingData({ ...DENING_HALL, bayWidths: [1, 1] })).toThrow(/nine facade bays/i);
   });

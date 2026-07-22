@@ -81,7 +81,10 @@ function addBracketSet(
     set.add(stageGroup);
   });
   const roleScale = role === 'intercolumn' ? 0.82 : 1;
-  set.scale.set(roleScale, (role === 'intercolumn' ? 0.92 : 1), roleScale);
+  const verticalScale = level === 'upper'
+    ? (role === 'intercolumn' ? 1.72 : 1.85)
+    : (role === 'intercolumn' ? 0.92 : 1);
+  set.scale.set(roleScale, verticalScale, roleScale);
   group.add(set);
 }
 
@@ -316,7 +319,7 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     upperRight,
     upperRear,
     upperFront,
-    upperBracketBaseY + 1.55,
+    15.89,
     0.38,
     materials.darkTimber,
   );
@@ -349,16 +352,18 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
 
   const plaque = createPlaque(materials);
   const plaqueZ = upperFront + 2.1;
-  plaque.position.set(0, 13.85, plaqueZ);
+  plaque.position.set(0, 13.75, plaqueZ);
+  plaque.rotation.x = Math.PI / 20;
+  plaque.userData.outwardTiltDegrees = 9;
   const plaqueHangerBeam = beam(4.6, 0.28, 0.42, materials.darkTimber);
   plaqueHangerBeam.name = '牌匾悬挂横梁';
   plaqueHangerBeam.userData.kind = 'plaque-hanger-beam';
-  plaqueHangerBeam.position.set(0, 16.35, plaqueZ);
+  plaqueHangerBeam.position.set(0, 15.88, plaqueZ);
   const plaqueHangerRods = [-0.9, 0.9].map((x) => {
     const rod = beam(0.18, 0.78, 0.18, materials.timber);
     rod.name = '牌匾吊杆';
     rod.userData.kind = 'plaque-hanger-rod';
-    rod.position.set(x, 15.95, plaqueZ);
+    rod.position.set(x, 15.58, plaqueZ);
     return rod;
   });
   grid.add(plaque, plaqueHangerBeam, ...plaqueHangerRods);
@@ -366,6 +371,14 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   for (const x of xAxis) {
     addBracketSet(brackets, x, lowerBracketBaseY, frontZ, materials, 'lower', false, 'column', 'front');
     addBracketSet(brackets, x, lowerBracketBaseY, rearZ, materials, 'lower', false, 'column', 'rear');
+  }
+  for (let index = 0; index < xAxis.length - 1; index += 1) {
+    const left = xAxis[index];
+    const right = xAxis[index + 1];
+    if (left === undefined || right === undefined) continue;
+    const midpoint = (left + right) / 2;
+    addBracketSet(brackets, midpoint, lowerBracketBaseY, frontZ, materials, 'lower', false, 'intercolumn', 'front');
+    addBracketSet(brackets, midpoint, lowerBracketBaseY, rearZ, materials, 'lower', false, 'intercolumn', 'rear');
   }
   const lowerLeft = xAxis[0] ?? 0;
   const lowerRight = xAxis.at(-1) ?? 0;

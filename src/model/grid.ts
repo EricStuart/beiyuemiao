@@ -38,6 +38,10 @@ export function validateBuildingData(data: BuildingData): void {
     data.footprintArea,
     data.planWidth,
     data.planDepth,
+    data.platformWidth,
+    data.platformDepth,
+    data.terraceWidth,
+    data.terraceDepth,
     data.corridorColumnHeight,
     data.upperColumnHeight,
   ];

@@ -111,6 +111,15 @@ describe('lower timber frame', () => {
     );
   });
 
+  it('tilts the plaque outward from the upper bracket band', () => {
+    const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const plaque = grid.children.find((child) => child.userData.kind === 'plaque');
+
+    expect(plaque).toBeDefined();
+    expect(plaque!.rotation.x).toBeCloseTo(Math.PI / 20, 3);
+    expect(plaque!.userData.outwardTiltDegrees).toBe(9);
+  });
+
   it('hangs the plaque independently in front of the upper brackets', () => {
     const { grid, brackets } = createTimberFrame(
       DENING_HALL,
@@ -171,6 +180,26 @@ describe('lower timber frame', () => {
     });
   });
 
+  it('stretches the upper bracket band to meet the upper roof without trapping the plaque', () => {
+    const { grid, brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const upper = brackets.children.filter(
+      (child) => child.userData.level === 'upper' && child.userData.kind === 'bracket',
+    );
+    const upperEaveFrame = grid.getObjectByName('二层斗栱承檐梁架')!;
+    const plaque = grid.children.find((child) => child.userData.kind === 'plaque')!;
+    const hanger = grid.children.find((child) => child.userData.kind === 'plaque-hanger-beam')!;
+    const upperMaxY = Math.max(...upper.map((set) => new Box3().setFromObject(set).max.y));
+    const frameBounds = new Box3().setFromObject(upperEaveFrame);
+    const plaqueTop = new Box3().setFromObject(plaque).max.y;
+    const hangerTop = new Box3().setFromObject(hanger).max.y;
+
+    expect(upperMaxY).toBeGreaterThan(15.6);
+    expect(frameBounds.max.y).toBeCloseTo(16.08, 1);
+    expect(upperMaxY).toBeGreaterThanOrEqual(frameBounds.min.y - 0.12);
+    expect(plaqueTop).toBeLessThan(16.08);
+    expect(hangerTop).toBeLessThan(16.08);
+  });
+
   it('removes every upper enclosure wall and mullion', () => {
     const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     expect(grid.children.some((child) => child.name === '上层檐下围护')).toBe(false);
@@ -221,5 +250,22 @@ describe('lower timber frame', () => {
     expect(counts).toEqual({ left: 13, right: 13 });
     expect(lowerSideSets.some((set) => set.userData.role === 'column')).toBe(true);
     expect(lowerSideSets.some((set) => set.userData.role === 'intercolumn')).toBe(true);
+  });
+
+  it('fills the lower front and rear bays with intercolumn bracket sets', () => {
+    const { brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const lower = brackets.children.filter((child) => child.userData.level === 'lower');
+    const counts = { front: 0, rear: 0, left: 0, right: 0 };
+    lower.forEach((set) => {
+      counts[set.userData.side as keyof typeof counts] += 1;
+    });
+
+    expect(counts).toEqual({ front: 19, rear: 19, left: 13, right: 13 });
+    expect(lower.some(
+      (set) => set.userData.side === 'front' && set.userData.role === 'intercolumn',
+    )).toBe(true);
+    expect(lower.some(
+      (set) => set.userData.side === 'rear' && set.userData.role === 'intercolumn',
+    )).toBe(true);
   });
 });

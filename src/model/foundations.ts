@@ -94,8 +94,8 @@ function addStairBalustrade(
 export function createFoundations(data: BuildingData, materials: BuildingMaterials): FoundationResult {
   const group = new Group();
   group.name = '台基与庭院';
-  const width = data.planWidth.value + 7.2;
-  const depth = data.planDepth.value + 6.2;
+  const width = data.platformWidth.value;
+  const depth = data.platformDepth.value;
   const visiblePlatformHeight = 2.9;
   const groundY = data.platformHeight - visiblePlatformHeight;
 
@@ -128,14 +128,15 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   cap.userData.kind = 'platform-main';
   group.add(lower, middle, upper, cap);
 
-  const terraceWidth = 26;
-  const terraceDepth = 10;
+  const terraceWidth = data.terraceWidth.value;
+  const terraceDepth = data.terraceDepth.value;
   const frontEdge = depth / 2;
   const terrace = new Group();
   terrace.name = '前凸月台';
   terrace.userData.kind = 'platform-terrace';
   const terraceCenterZ = frontEdge + terraceDepth / 2;
   const terraceWall = box(terraceWidth, upperTop - groundY, terraceDepth, materials.brick);
+  terraceWall.userData.kind = 'terrace-wall';
   terraceWall.position.set(0, (groundY + upperTop) / 2, terraceCenterZ);
   const terraceBand = box(terraceWidth + 0.45, 0.28, terraceDepth + 0.45, materials.stone);
   terraceBand.position.set(0, groundY + 0.9, terraceCenterZ);
@@ -144,13 +145,13 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   terrace.add(terraceWall, terraceBand, terraceCap);
   group.add(terrace);
 
-  const stairWidth = 10.8;
-  const stepCount = 10;
-  const stepDepth = 0.56;
+  const stairWidth = 6.4;
+  const stepCount = 12;
+  const stepDepth = 5.5 / stepCount;
   const terraceFront = frontEdge + terraceDepth;
   for (let index = 0; index < stepCount; index += 1) {
     const height = visiblePlatformHeight * ((index + 1) / stepCount);
-    const step = box(stairWidth, height, stepDepth + 0.08, materials.stone);
+    const step = box(stairWidth, height, stepDepth, materials.stone);
     step.position.set(
       0,
       groundY + height / 2,
@@ -163,15 +164,15 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
     group.add(step);
   }
 
-  const sideStairWidth = 3.4;
-  const sideStepRun = terraceDepth / stepCount;
-  const sideFlightLength = sideStepRun * stepCount;
+  const sideStairWidth = 3.0;
+  const sideFlightLength = 4.8;
+  const sideStepRun = sideFlightLength / stepCount;
   const sideStairZ = frontEdge + sideStairWidth / 2;
   for (const side of [-1, 1]) {
     const sideName = side < 0 ? 'left' : 'right';
     for (let index = 0; index < stepCount; index += 1) {
       const height = visiblePlatformHeight * ((index + 1) / stepCount);
-      const step = box(sideStepRun + 0.08, height, sideStairWidth, materials.stone);
+      const step = box(sideStepRun, height, sideStairWidth, materials.stone);
       step.position.set(
         side * (terraceWidth / 2 + (stepCount - index - 0.5) * sideStepRun),
         groundY + height / 2,

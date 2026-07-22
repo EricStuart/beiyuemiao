@@ -50,6 +50,22 @@ describe('platform layer geometry', () => {
     expect(terraceBounds.max.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
   });
 
+  it('uses the measured main platform and terrace footprints', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const main = group.children.find((child) => child.userData.kind === 'platform-wall')!;
+    const terrace = group.children.find((child) => child.userData.kind === 'platform-terrace')!;
+    const terraceWall = terrace.children.find((child) => child.userData.kind === 'terrace-wall');
+    expect(terraceWall).toBeDefined();
+    const mainSize = new Box3().setFromObject(main).getSize(new Vector3());
+    const terraceSize = new Box3().setFromObject(terraceWall!).getSize(new Vector3());
+
+    expect(mainSize.x).toBeCloseTo(48.03, 2);
+    expect(mainSize.z).toBeCloseTo(31.77, 2);
+    expect(terraceSize.x).toBeCloseTo(25.10, 2);
+    expect(terraceSize.z).toBeCloseTo(19.86, 2);
+  });
+
   it('builds a large terrace with front, left, and right stair flights', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const { group } = createFoundations(DENING_HALL, materials);
@@ -66,14 +82,35 @@ describe('platform layer geometry', () => {
 
     (['front', 'left', 'right'] as const).forEach((side) => {
       const flight = steps.filter((step) => step.userData.side === side);
-      expect(flight).toHaveLength(10);
+      expect(flight).toHaveLength(12);
       const lowest = flight.find((step) => step.userData.index === 0);
-      const highest = flight.find((step) => step.userData.index === 9);
+      const highest = flight.find((step) => step.userData.index === 11);
       expect(lowest).toBeDefined();
       expect(highest).toBeDefined();
       expect(new Box3().setFromObject(lowest!).min.y).toBeCloseTo(groundY, 5);
       expect(new Box3().setFromObject(highest!).max.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
     });
+  });
+
+  it('sizes the front and side stair flights from the measured plan', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const steps = group.children.filter((child) => child.userData.kind === 'platform-step');
+    const boundsFor = (side: string): Box3 => {
+      const bounds = new Box3();
+      steps.filter((step) => step.userData.side === side).forEach((step) => bounds.expandByObject(step));
+      return bounds;
+    };
+    const frontSize = boundsFor('front').getSize(new Vector3());
+    const leftSize = boundsFor('left').getSize(new Vector3());
+    const rightSize = boundsFor('right').getSize(new Vector3());
+
+    expect(frontSize.x).toBeCloseTo(6.4, 1);
+    expect(frontSize.z).toBeCloseTo(5.5, 1);
+    expect(leftSize.x).toBeCloseTo(4.8, 1);
+    expect(leftSize.z).toBeCloseTo(3.0, 1);
+    expect(rightSize.x).toBeCloseTo(4.8, 1);
+    expect(rightSize.z).toBeCloseTo(3.0, 1);
   });
 
   it('wraps the main platform and terrace with complete white balustrades', () => {
@@ -114,12 +151,16 @@ describe('platform layer geometry', () => {
     const leftSize = leftBounds.getSize(new Vector3());
     const rightSize = rightBounds.getSize(new Vector3());
 
-    expect(leftSize.x).toBeGreaterThan(leftSize.z * 2.5);
-    expect(rightSize.x).toBeGreaterThan(rightSize.z * 2.5);
+    expect(leftSize.x).toBeGreaterThan(leftSize.z * 1.5);
+    expect(rightSize.x).toBeGreaterThan(rightSize.z * 1.5);
     const leftLowest = left.find((step) => step.userData.index === 0)!;
-    const leftHighest = left.find((step) => step.userData.index === 9)!;
+    const leftHighest = left.find((step) => step.userData.index === 11)!;
     const rightLowest = right.find((step) => step.userData.index === 0)!;
-    const rightHighest = right.find((step) => step.userData.index === 9)!;
+    const rightHighest = right.find((step) => step.userData.index === 11)!;
+    expect(leftLowest).toBeDefined();
+    expect(leftHighest).toBeDefined();
+    expect(rightLowest).toBeDefined();
+    expect(rightHighest).toBeDefined();
     expect(leftHighest.position.x).toBeGreaterThan(leftLowest.position.x);
     expect(rightHighest.position.x).toBeLessThan(rightLowest.position.x);
   });

@@ -54,7 +54,7 @@ export function createAppUI(root: HTMLElement, controls: ViewerControls): AppUI 
 
     <div class="dimension-guides" hidden aria-label="建筑尺寸">
       <div class="height-guide"><span>25.6 m</span></div>
-      <div class="width-guide"><span>52.8 m · 推定</span></div>
+      <div class="width-guide"><span>${DENING_HALL.planWidth.value.toFixed(2)} m · 测绘柱网</span></div>
     </div>
 
     <div class="tool-popover view-popover" data-popover="views" hidden>
@@ -107,14 +107,15 @@ export function createAppUI(root: HTMLElement, controls: ViewerControls): AppUI 
             <div><dt>外观柱网</dt><dd>九间 × 六进 <span class="evidence documented">文献</span></dd></div>
             <div><dt>殿身</dt><dd>七间 × 四进 <span class="evidence secondary">建筑史</span></dd></div>
             <div><dt>屋顶</dt><dd>重檐庑殿顶 <span class="evidence documented">文献</span></dd></div>
-            <div><dt>面阔</dt><dd>52.8 m <span class="evidence inferred">推定</span></dd></div>
-            <div><dt>进深</dt><dd>38.06 m <span class="evidence inferred">推定</span></dd></div>
+            <div><dt>柱网</dt><dd>${DENING_HALL.planWidth.value.toFixed(2)} × ${DENING_HALL.planDepth.value.toFixed(2)} m <span class="evidence secondary">测绘</span></dd></div>
+            <div><dt>主台基</dt><dd>${DENING_HALL.platformWidth.value.toFixed(2)} × ${DENING_HALL.platformDepth.value.toFixed(2)} m <span class="evidence secondary">测绘</span></dd></div>
+            <div><dt>前出月台</dt><dd>${DENING_HALL.terraceWidth.value.toFixed(2)} × ${DENING_HALL.terraceDepth.value.toFixed(2)} m <span class="evidence secondary">测绘</span></dd></div>
           </dl>
         </section>
 
         <section class="fact-section confidence-note">
           <h3>尺寸说明</h3>
-          <p>通高与间数采用公开文物资料。当前公开渠道未取得逐间米制测绘图，通面阔、通进深和逐间尺寸由占地信息、柱网权重及多视角照片拟合，均非实测值。</p>
+          <p>通高与间数采用公开文物资料。主台基、前出月台和外檐柱网总跨度采用用户提供的平面测绘摘录；逐间柱距仍按测绘总跨度与九间六进对称权重换算。</p>
         </section>
 
         <section class="fact-section">
@@ -122,7 +123,7 @@ export function createAppUI(root: HTMLElement, controls: ViewerControls): AppUI 
           <ul class="source-list">
             ${DENING_HALL.sources
               .filter((source) => !source.url.startsWith('/'))
-              .map((source) => `<li><a href="${source.url}" target="_blank" rel="noreferrer">${source.label}</a><span>${source.kind === 'documented' ? '文献' : '图像'}</span></li>`)
+              .map((source) => `<li><a href="${source.url}" target="_blank" rel="noreferrer">${source.label}</a><span>${source.kind === 'documented' ? '文献' : source.kind === 'secondary' ? '测绘' : '图像'}</span></li>`)
               .join('')}
           </ul>
         </section>
