@@ -165,15 +165,17 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
 
   const sideStairWidth = 3.4;
   const sideStepRun = terraceDepth / stepCount;
+  const sideFlightLength = sideStepRun * stepCount;
+  const sideStairZ = frontEdge + sideStairWidth / 2;
   for (const side of [-1, 1]) {
     const sideName = side < 0 ? 'left' : 'right';
     for (let index = 0; index < stepCount; index += 1) {
       const height = visiblePlatformHeight * ((index + 1) / stepCount);
-      const step = box(sideStairWidth, height, sideStepRun + 0.08, materials.stone);
+      const step = box(sideStepRun + 0.08, height, sideStairWidth, materials.stone);
       step.position.set(
-        side * (terraceWidth / 2 + sideStairWidth / 2),
+        side * (terraceWidth / 2 + (stepCount - index - 0.5) * sideStepRun),
         groundY + height / 2,
-        terraceFront - (index + 0.5) * sideStepRun,
+        sideStairZ,
       );
       step.name = side < 0 ? '左侧台阶' : '右侧台阶';
       step.userData.kind = 'platform-step';
@@ -187,14 +189,14 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   const mainFrontZ = (depth + 0.35) / 2;
   const mainRearZ = -mainFrontZ;
   const terraceHalf = terraceWidth / 2;
-  const mainFrontSegment = mainEdgeX - terraceHalf - 0.35;
+  const mainFrontSegment = mainEdgeX - terraceHalf - sideFlightLength - 0.35;
   for (const side of [-1, 1]) {
     addStraightBalustrade(
       group,
       'front',
       'x',
       mainFrontSegment,
-      side * (terraceHalf + 0.35 + mainFrontSegment / 2),
+      side * (terraceHalf + sideFlightLength + 0.35 + mainFrontSegment / 2),
       mainFrontZ,
       data.platformHeight,
       materials.stone,
@@ -217,8 +219,8 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
       materials.stone,
     );
   }
-  const terraceSideRailLength = terraceDepth - 1.4;
-  const terraceSideRailZ = frontEdge + 1.4 + terraceSideRailLength / 2;
+  const terraceSideRailLength = terraceDepth - 4;
+  const terraceSideRailZ = frontEdge + 4 + terraceSideRailLength / 2;
   addStraightBalustrade(group, 'terrace-left', 'z', terraceSideRailLength, -terraceHalf - 0.15, terraceSideRailZ, data.platformHeight, materials.stone);
   addStraightBalustrade(group, 'terrace-right', 'z', terraceSideRailLength, terraceHalf + 0.15, terraceSideRailZ, data.platformHeight, materials.stone);
 
@@ -240,15 +242,17 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
 
   for (const side of [-1, 1]) {
     const stairSide = side < 0 ? 'left' : 'right';
-    const innerX = side * (terraceHalf + 0.22);
-    const outerX = side * (terraceHalf + sideStairWidth - 0.22);
-    for (const [railIndex, x] of [[0, innerX], [1, outerX]] as const) {
+    const highX = side * (terraceHalf + 0.25);
+    const lowX = side * (terraceHalf + sideFlightLength - 0.25);
+    const innerZ = mainFrontZ + 0.22;
+    const outerZ = mainFrontZ + sideStairWidth - 0.22;
+    for (const [railIndex, z] of [[0, innerZ], [1, outerZ]] as const) {
       addStairBalustrade(
         group,
         stairSide,
         railIndex,
-        new Vector3(x, groundY + 0.62, terraceFront - 0.25),
-        new Vector3(x, data.platformHeight + 0.62, frontEdge + 0.4),
+        new Vector3(lowX, groundY + 0.62, z),
+        new Vector3(highX, data.platformHeight + 0.62, z),
         groundY,
         data.platformHeight,
         materials.stone,

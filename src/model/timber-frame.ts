@@ -48,6 +48,7 @@ function addBracketSet(
   inward = false,
   role: 'column' | 'intercolumn' = 'column',
   side?: EnclosureSide,
+  tier?: 'lower' | 'middle' | 'upper',
 ): void {
   const set = new Group();
   set.position.set(x, y, z);
@@ -56,6 +57,7 @@ function addBracketSet(
   set.userData.kind = 'bracket';
   set.userData.role = role;
   set.userData.side = side;
+  set.userData.tier = tier;
   if (inward) set.rotation.y = Math.PI / 2;
   const bearing = beam(1.55, 0.24, 0.62, materials.paintedGreen);
   const block = beam(0.72, 0.42, 0.72, materials.paintedBlue);
@@ -75,7 +77,9 @@ function addBracketSet(
     const eaveBearer = beam(2.75, 0.22, 0.5, materials.paintedGreen);
     eaveBearer.position.y = 0.94;
     set.add(lowerDou, secondArm, forwardAng, eaveBearer);
-    if (role === 'intercolumn') set.scale.set(0.82, 0.9, 0.82);
+    const tierScale = tier === 'lower' ? 0.78 : tier === 'middle' ? 0.9 : 1;
+    const roleScale = role === 'intercolumn' ? 0.82 : 1;
+    set.scale.set(roleScale * tierScale, (role === 'intercolumn' ? 0.9 : 1) * tierScale, roleScale * tierScale);
   }
   group.add(set);
 }
@@ -254,87 +258,90 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   upperRearBeam.position.z = upperZ[0] ?? 0;
   grid.add(upperBeam, upperRearBeam);
 
-  const upperEnclosure = new Group();
-  upperEnclosure.name = '上层檐下围护';
   const upperRear = upperZ[0] ?? 0;
-  const upperEnclosureHeight = upperTop - upperBottom;
-  for (let bay = 0; bay < upperX.length - 1; bay += 1) {
-    const left = upperX[bay];
-    const right = upperX[bay + 1];
-    if (left === undefined || right === undefined) continue;
-    const panelWidth = right - left - 0.24;
-    for (const z of [upperFront - 0.12, upperRear + 0.12]) {
-      const panel = beam(panelWidth, upperEnclosureHeight, 0.28, materials.door);
-      panel.position.set((left + right) / 2, upperBottom + upperEnclosureHeight / 2, z);
-      upperEnclosure.add(panel);
-      for (let stud = 1; stud < 4; stud += 1) {
-        const mullion = beam(0.11, upperEnclosureHeight - 0.2, 0.38, materials.darkTimber);
-        mullion.position.set(left + ((right - left) / 4) * stud, upperBottom + upperEnclosureHeight / 2, z + 0.08);
-        upperEnclosure.add(mullion);
-      }
-    }
-  }
   const upperLeft = upperX[0] ?? 0;
   const upperRight = upperX.at(-1) ?? 0;
-  for (let bay = 0; bay < upperZ.length - 1; bay += 1) {
-    const rear = upperZ[bay];
-    const front = upperZ[bay + 1];
-    if (rear === undefined || front === undefined) continue;
-    const span = front - rear;
-    for (const [side, x] of [['left', upperLeft], ['right', upperRight]] as const) {
-      const panel = beam(0.28, upperEnclosureHeight, span - 0.24, materials.door);
-      panel.name = '上层侧面围护板';
-      panel.userData.kind = 'upper-enclosure-panel';
-      panel.userData.side = side;
-      panel.userData.bay = bay;
-      panel.position.set(x, upperBottom + upperEnclosureHeight / 2, (rear + front) / 2);
-      upperEnclosure.add(panel);
-      for (let stud = 1; stud < 4; stud += 1) {
-        const mullion = beam(0.38, upperEnclosureHeight - 0.2, 0.1, materials.darkTimber);
-        mullion.position.set(
-          x + (side === 'left' ? -0.08 : 0.08),
-          upperBottom + upperEnclosureHeight / 2,
-          rear + (span / 4) * stud,
-        );
-        upperEnclosure.add(mullion);
-      }
+
+  const upperBracketFrames = new Group();
+  upperBracketFrames.name = '上层多层斗栱梁架';
+  const tierConfigs = [
+    { tier: 'lower' as const, y: 13.0 },
+    { tier: 'middle' as const, y: 14.25 },
+    { tier: 'upper' as const, y: upperTop + 0.12 },
+  ];
+  const addUpperTier = (tier: 'lower' | 'middle' | 'upper', y: number): void => {
+    for (const x of upperX) {
+      addBracketSet(brackets, x, y, upperFront, materials, 'upper', false, 'column', 'front', tier);
+      addBracketSet(brackets, x, y, upperRear, materials, 'upper', false, 'column', 'rear', tier);
     }
-  }
-  grid.add(upperEnclosure);
+    for (let index = 0; index < upperX.length - 1; index += 1) {
+      const left = upperX[index];
+      const right = upperX[index + 1];
+      if (left === undefined || right === undefined) continue;
+      const midpoint = (left + right) / 2;
+      addBracketSet(brackets, midpoint, y, upperFront, materials, 'upper', false, 'intercolumn', 'front', tier);
+      addBracketSet(brackets, midpoint, y, upperRear, materials, 'upper', false, 'intercolumn', 'rear', tier);
+    }
+    for (const z of upperZ) {
+      addBracketSet(brackets, upperLeft, y, z, materials, 'upper', true, 'column', 'left', tier);
+      addBracketSet(brackets, upperRight, y, z, materials, 'upper', true, 'column', 'right', tier);
+    }
+    for (let index = 0; index < upperZ.length - 1; index += 1) {
+      const rear = upperZ[index];
+      const front = upperZ[index + 1];
+      if (rear === undefined || front === undefined) continue;
+      const midpoint = (rear + front) / 2;
+      addBracketSet(brackets, upperLeft, y, midpoint, materials, 'upper', true, 'intercolumn', 'left', tier);
+      addBracketSet(brackets, upperRight, y, midpoint, materials, 'upper', true, 'intercolumn', 'right', tier);
+    }
+
+    const frontFrame = beam(upperWidth + 1, 0.3, 0.44, materials.paintedGreen);
+    frontFrame.position.set(0, y - 0.34, upperFront);
+    const rearFrame = frontFrame.clone();
+    rearFrame.position.z = upperRear;
+    const leftFrame = beam(0.44, 0.3, upperDepth + 1, materials.paintedGreen);
+    leftFrame.position.set(upperLeft, y - 0.34, 0);
+    const rightFrame = leftFrame.clone();
+    rightFrame.position.x = upperRight;
+    upperBracketFrames.add(frontFrame, rearFrame, leftFrame, rightFrame);
+  };
+  tierConfigs.forEach(({ tier, y }) => addUpperTier(tier, y));
+  grid.add(upperBracketFrames);
 
   const plaque = createPlaque(materials);
-  plaque.position.set(0, 13.85, upperFront + 0.48);
-  grid.add(plaque);
+  const plaqueZ = upperFront + 2.1;
+  plaque.position.set(0, 13.85, plaqueZ);
+  const plaqueHangerBeam = beam(7.2, 0.28, 0.42, materials.darkTimber);
+  plaqueHangerBeam.name = '牌匾悬挂横梁';
+  plaqueHangerBeam.userData.kind = 'plaque-hanger-beam';
+  plaqueHangerBeam.position.set(0, 16.0, plaqueZ);
+  const plaqueHangerRods = [-2.25, 2.25].map((x) => {
+    const rod = beam(0.18, 0.92, 0.18, materials.timber);
+    rod.name = '牌匾吊杆';
+    rod.userData.kind = 'plaque-hanger-rod';
+    rod.position.set(x, 15.52, plaqueZ);
+    return rod;
+  });
+  grid.add(plaque, plaqueHangerBeam, ...plaqueHangerRods);
 
   for (const x of xAxis) {
-    addBracketSet(brackets, x, outerTop + 0.65, frontZ, materials, 'lower');
-    addBracketSet(brackets, x, outerTop + 0.65, rearZ, materials, 'lower');
+    addBracketSet(brackets, x, outerTop + 0.65, frontZ, materials, 'lower', false, 'column', 'front');
+    addBracketSet(brackets, x, outerTop + 0.65, rearZ, materials, 'lower', false, 'column', 'rear');
   }
-  for (const x of upperX) {
-    addBracketSet(brackets, x, upperTop + 0.12, upperFront, materials, 'upper', false, 'column', 'front');
-    addBracketSet(brackets, x, upperTop + 0.12, upperRear, materials, 'upper', false, 'column', 'rear');
+  const lowerLeft = xAxis[0] ?? 0;
+  const lowerRight = xAxis.at(-1) ?? 0;
+  for (const z of zAxis) {
+    addBracketSet(brackets, lowerLeft, outerTop + 0.65, z, materials, 'lower', true, 'column', 'left');
+    addBracketSet(brackets, lowerRight, outerTop + 0.65, z, materials, 'lower', true, 'column', 'right');
   }
-  for (let index = 0; index < upperX.length - 1; index += 1) {
-    const left = upperX[index];
-    const right = upperX[index + 1];
-    if (left === undefined || right === undefined) continue;
-    const midpoint = (left + right) / 2;
-    addBracketSet(brackets, midpoint, upperTop + 0.12, upperFront, materials, 'upper', false, 'intercolumn', 'front');
-    addBracketSet(brackets, midpoint, upperTop + 0.12, upperRear, materials, 'upper', false, 'intercolumn', 'rear');
-  }
-  for (const z of upperZ) {
-    addBracketSet(brackets, upperLeft, upperTop + 0.12, z, materials, 'upper', true, 'column', 'left');
-    addBracketSet(brackets, upperRight, upperTop + 0.12, z, materials, 'upper', true, 'column', 'right');
-  }
-  for (let index = 0; index < upperZ.length - 1; index += 1) {
-    const rear = upperZ[index];
-    const front = upperZ[index + 1];
+  for (let index = 0; index < zAxis.length - 1; index += 1) {
+    const rear = zAxis[index];
+    const front = zAxis[index + 1];
     if (rear === undefined || front === undefined) continue;
     const midpoint = (rear + front) / 2;
-    addBracketSet(brackets, upperLeft, upperTop + 0.12, midpoint, materials, 'upper', true, 'intercolumn', 'left');
-    addBracketSet(brackets, upperRight, upperTop + 0.12, midpoint, materials, 'upper', true, 'intercolumn', 'right');
+    addBracketSet(brackets, lowerLeft, outerTop + 0.65, midpoint, materials, 'lower', true, 'intercolumn', 'left');
+    addBracketSet(brackets, lowerRight, outerTop + 0.65, midpoint, materials, 'lower', true, 'intercolumn', 'right');
   }
-
   const interiorFloor = beam(data.planWidth.value - 8, 0.12, data.planDepth.value - 8, materials.darkTimber);
   interiorFloor.position.y = platformTop + 0.06;
   grid.add(interiorFloor);

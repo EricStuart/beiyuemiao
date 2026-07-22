@@ -1,4 +1,4 @@
-import { Box3, Mesh } from 'three';
+import { Box3, Mesh, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createFoundations } from './foundations';
@@ -98,5 +98,29 @@ describe('platform layer geometry', () => {
     (['front', 'left', 'right'] as const).forEach((side) => {
       expect(stairRails.filter((rail) => rail.userData.stairSide === side)).toHaveLength(2);
     });
+  });
+
+  it('runs both side stair flights horizontally along the main platform wall', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const steps = group.children.filter((child) => child.userData.kind === 'platform-step');
+
+    const left = steps.filter((step) => step.userData.side === 'left');
+    const right = steps.filter((step) => step.userData.side === 'right');
+    const leftBounds = new Box3();
+    const rightBounds = new Box3();
+    left.forEach((step) => leftBounds.expandByObject(step));
+    right.forEach((step) => rightBounds.expandByObject(step));
+    const leftSize = leftBounds.getSize(new Vector3());
+    const rightSize = rightBounds.getSize(new Vector3());
+
+    expect(leftSize.x).toBeGreaterThan(leftSize.z * 2.5);
+    expect(rightSize.x).toBeGreaterThan(rightSize.z * 2.5);
+    const leftLowest = left.find((step) => step.userData.index === 0)!;
+    const leftHighest = left.find((step) => step.userData.index === 9)!;
+    const rightLowest = right.find((step) => step.userData.index === 0)!;
+    const rightHighest = right.find((step) => step.userData.index === 9)!;
+    expect(leftHighest.position.x).toBeGreaterThan(leftLowest.position.x);
+    expect(rightHighest.position.x).toBeLessThan(rightLowest.position.x);
   });
 });
