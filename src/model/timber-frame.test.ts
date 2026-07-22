@@ -2,7 +2,11 @@ import { Box3, Mesh, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
-import { getUpperRoofSurfaceYAtFrontZ, UPPER_ROOF_BASE_Y } from './roof';
+import {
+  getLowerRoofSurfaceYAtFrontZ,
+  getUpperRoofSurfaceYAtFrontZ,
+  UPPER_ROOF_BASE_Y,
+} from './roof';
 import { createTimberFrame } from './timber-frame';
 
 describe('lower timber frame', () => {
@@ -97,7 +101,7 @@ describe('lower timber frame', () => {
     expect(letteringNames).toHaveLength(0);
   });
 
-  it('uses a roof-clear horizontal plaque with heavier top and bottom frames', () => {
+  it('uses a square plaque with heavier top and bottom frames', () => {
     const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const plaque = grid.children.find((child) => child.userData.kind === 'plaque')!;
     const board = plaque.getObjectByName('牌匾绿色底板')!;
@@ -105,14 +109,14 @@ describe('lower timber frame', () => {
     const horizontalFrame = plaque.getObjectByName('牌匾上下边框');
     const verticalFrame = plaque.getObjectByName('牌匾左右边框');
 
-    expect(size.y / size.x).toBeGreaterThan(0.4);
-    expect(size.y / size.x).toBeLessThan(0.6);
+    expect(size.y / size.x).toBeGreaterThan(0.95);
+    expect(size.y / size.x).toBeLessThan(1.05);
     expect(horizontalFrame?.userData.thickness).toBeGreaterThan(
       verticalFrame?.userData.thickness,
     );
   });
 
-  it('matches the central two-bracket span, clears the upper eave, and sits on the transfer beam', () => {
+  it('fits a lowered square plaque between the upper and lower roof surfaces', () => {
     const { grid, brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const plaque = grid.children.find((child) => child.userData.kind === 'plaque')!;
     const board = plaque.getObjectByName('牌匾绿色底板')!;
@@ -130,18 +134,21 @@ describe('lower timber frame', () => {
     const centralPairBounds = new Box3();
     centralTwoBrackets.forEach((bracket) => centralPairBounds.expandByObject(bracket));
     const centralPairWidth = centralPairBounds.getSize(new Vector3()).x;
+    const lowerRoofSurfaceY = getLowerRoofSurfaceYAtFrontZ(DENING_HALL, plaqueBounds.min.z);
+    const plaqueCentreY = plaqueBounds.getCenter(new Vector3()).y;
 
-    expect(boardSize.x).toBeGreaterThan(2.5);
-    expect(boardSize.y).toBeGreaterThan(1);
-    expect(plaqueSize.y / plaqueSize.x).toBeGreaterThan(0.4);
-    expect(plaqueSize.y / plaqueSize.x).toBeLessThan(0.6);
-    expect(plaqueSize.x / centralPairWidth).toBeGreaterThanOrEqual(0.85);
-    expect(plaqueSize.x / centralPairWidth).toBeLessThanOrEqual(0.95);
-    expect(plaqueBounds.min.y).toBeCloseTo(transferTop, 2);
+    expect(boardSize.x).toBeGreaterThan(2);
+    expect(boardSize.y).toBeGreaterThan(2);
+    expect(plaqueSize.y / plaqueSize.x).toBeGreaterThan(0.95);
+    expect(plaqueSize.y / plaqueSize.x).toBeLessThan(1.05);
+    expect(plaqueSize.x / centralPairWidth).toBeGreaterThanOrEqual(0.68);
+    expect(plaqueSize.x / centralPairWidth).toBeLessThanOrEqual(0.75);
+    expect(plaqueCentreY).toBeLessThan(transferTop);
     expect(plaqueBounds.min.z).toBeGreaterThan(10.5);
     expect(plaqueBounds.max.y).toBeLessThan(
       getUpperRoofSurfaceYAtFrontZ(DENING_HALL, plaqueBounds.min.z) - 0.05,
     );
+    expect(plaqueBounds.min.y).toBeGreaterThan(lowerRoofSurfaceY + 0.05);
   });
 
   it('tilts the plaque outward from the upper bracket band', () => {

@@ -11,6 +11,7 @@ import type { BuildingData } from '../data/building';
 import { createAxisCoordinates } from './grid';
 import type { BuildingMaterials } from './materials';
 import {
+  getLowerRoofSurfaceYAtFrontZ,
   getUpperRoofSurfaceYAtFrontZ,
   UPPER_ROOF_BASE_Y,
 } from './roof';
@@ -409,24 +410,26 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     .slice(0, 2);
   const centralPairBounds = new Box3();
   centralTwoBrackets.forEach((bracket) => centralPairBounds.expandByObject(bracket));
-  const targetPlaqueWidth = centralPairBounds.getSize(new Vector3()).x * 0.9;
-  const plaqueBottomY = new Box3().setFromObject(upperTransferFrame).max.y;
+  const targetPlaqueSide = centralPairBounds.getSize(new Vector3()).x * 0.72;
   const initialPlaqueWidth = new Box3().setFromObject(plaque).getSize(new Vector3()).x;
-  const plaqueScale = targetPlaqueWidth / initialPlaqueWidth;
+  const plaqueScale = targetPlaqueSide / initialPlaqueWidth;
   plaque.scale.set(plaqueScale, 1, plaqueScale);
   plaque.position.z = upperFront + 2.1;
   let plaqueBounds = new Box3().setFromObject(plaque);
-  for (let iteration = 0; iteration < 2; iteration += 1) {
-    const roofSurfaceY = getUpperRoofSurfaceYAtFrontZ(data, plaqueBounds.min.z);
-    const targetPlaqueHeight = Math.max(0.45, roofSurfaceY - 0.08 - plaqueBottomY);
+  for (let iteration = 0; iteration < 3; iteration += 1) {
+    const upperRoofSurfaceY = getUpperRoofSurfaceYAtFrontZ(data, plaqueBounds.min.z);
+    const lowerRoofSurfaceY = getLowerRoofSurfaceYAtFrontZ(data, plaqueBounds.min.z);
+    const availableHeight = upperRoofSurfaceY - lowerRoofSurfaceY - 0.1;
+    const targetPlaqueHeight = Math.min(targetPlaqueSide, availableHeight);
     plaque.scale.y *= targetPlaqueHeight / plaqueBounds.getSize(new Vector3()).y;
     plaqueBounds = new Box3().setFromObject(plaque);
   }
-  plaque.position.y += plaqueBottomY - plaqueBounds.min.y;
+  const lowerRoofSurfaceY = getLowerRoofSurfaceYAtFrontZ(data, plaqueBounds.min.z);
+  plaque.position.y += lowerRoofSurfaceY + 0.05 - plaqueBounds.min.y;
   plaqueBounds = new Box3().setFromObject(plaque);
   const plaqueTopY = plaqueBounds.max.y;
-  plaque.userData.bottomY = plaqueBottomY;
-  plaque.userData.scaleBasis = 'central-two-upper-brackets';
+  plaque.userData.bottomY = plaqueBounds.min.y;
+  plaque.userData.scaleBasis = 'square-between-roofs';
   const plaqueWidth = plaqueBounds.getSize(new Vector3()).x;
   const plaqueZ = plaque.position.z;
   const plaqueHangerDepth = Math.max(0.28, plaqueZ - upperFront + 0.28);
@@ -434,7 +437,7 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   plaqueHangerBeam.name = '牌匾悬挂横梁';
   plaqueHangerBeam.userData.kind = 'plaque-hanger-beam';
   plaqueHangerBeam.position.set(0, plaqueTopY - 0.12, upperFront + (plaqueZ - upperFront) / 2);
-  const plaqueHangerRods = [-0.42, 0.42].map((x) => {
+  const plaqueHangerRods = [-plaqueWidth * 0.28, plaqueWidth * 0.28].map((x) => {
     const rod = beam(0.12, 0.34, 0.12, materials.timber);
     rod.name = '牌匾吊杆';
     rod.userData.kind = 'plaque-hanger-rod';

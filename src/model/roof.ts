@@ -54,6 +54,23 @@ export function getUpperRoofSurfaceYAtFrontZ(data: BuildingData, z: number): num
   );
 }
 
+export function getLowerRoofSurfaceYAtFrontZ(data: BuildingData, z: number): number {
+  const eaveHalfDepth = (data.planDepth.value + 9) / 2;
+  const topHalfDepth = (data.planDepth.value * 0.62 + 1) / 2;
+  const t = Math.min(1, Math.max(
+    0,
+    (eaveHalfDepth - Math.abs(z)) / (eaveHalfDepth - topHalfDepth),
+  ));
+  return 8.72 + evaluateRaisedEaveHeight(
+    {
+      run: eaveHalfDepth - topHalfDepth,
+      rise: 13.05 - 8.72,
+      eaveLift: 0.58,
+    },
+    t,
+  );
+}
+
 function profileY(t: number, dimensions: RoofDimensions): number {
   return dimensions.baseY + evaluateRaisedEaveHeight(
     {
