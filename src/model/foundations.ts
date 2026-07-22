@@ -270,20 +270,17 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
     const stairSide = side < 0 ? 'left' : 'right';
     const highX = side * (terraceHalf + 0.25);
     const lowX = side * (terraceHalf + sideFlightLength - 0.25);
-    const innerZ = mainFrontZ + 0.22;
     const outerZ = mainFrontZ + sideStairWidth - 0.22;
-    for (const [railIndex, z] of [[0, innerZ], [1, outerZ]] as const) {
-      addStairBalustrade(
-        group,
-        stairSide,
-        railIndex,
-        new Vector3(lowX, groundY + 0.62, z),
-        new Vector3(highX, data.platformHeight + 0.62, z),
-        groundY,
-        data.platformHeight,
-        materials.stone,
-      );
-    }
+    addStairBalustrade(
+      group,
+      stairSide,
+      1,
+      new Vector3(lowX, groundY + 0.62, outerZ),
+      new Vector3(highX, data.platformHeight + 0.62, outerZ),
+      groundY,
+      data.platformHeight,
+      materials.stone,
+    );
   }
 
   return {

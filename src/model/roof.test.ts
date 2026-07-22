@@ -11,11 +11,14 @@ import {
 import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 
 describe('hip ridge alignment', () => {
-  it('uses faded yellow tiles and aged green diamond tiles', () => {
+  it('uses dark green field tiles below the ridge and diamond greens', () => {
     const materials = createBuildingMaterials(DENING_HALL);
-    expect(materials.tile.color.getHex()).toBe(0x777447);
-    expect(materials.tileRib.color.getHex()).toBe(0x55553a);
+    expect(materials.tile.color.getHex()).toBe(0x1d4436);
+    expect(materials.tileRib.color.getHex()).toBe(0x143126);
     expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
+    const fieldLightness = materials.tile.color.getHSL({ h: 0, s: 0, l: 0 }).l;
+    expect(fieldLightness).toBeLessThan(materials.diamondTile.color.getHSL({ h: 0, s: 0, l: 0 }).l);
+    expect(fieldLightness).toBeLessThan(materials.glazedGreen.color.getHSL({ h: 0, s: 0, l: 0 }).l);
     expect(materials.tile.roughness).toBeGreaterThan(0.85);
     expect(materials.tile.vertexColors).toBe(false);
     expect(materials.diamondTile.vertexColors).toBe(false);
@@ -29,7 +32,8 @@ describe('hip ridge alignment', () => {
       expect(covering!.userData.kind).toBe('roof-tile-covering');
       expect(covering!.userData.instanceCount).toBeGreaterThan(400);
       expect(covering!.userData.surfaceOffset).toBeGreaterThanOrEqual(0.07);
-      expect(covering!.userData.tileRollRadians).toBeCloseTo(-Math.PI / 2, 5);
+      expect(covering!.userData.tileOrientationMode).toBe('surface-normal');
+      expect(covering!.userData.tileOpeningDirection).toBe('toward-roof-surface');
     });
   });
 

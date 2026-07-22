@@ -146,6 +146,7 @@ type RoofSide = 'front' | 'back' | 'left' | 'right';
 interface TilePlacement {
   position: Vector3;
   tangent: Vector3;
+  normal: Vector3;
   side: RoofSide;
   ratio: number;
   t: number;
@@ -172,6 +173,13 @@ function roofPointAt(
   return new Vector3(-extentX, y, ratio * extentZ);
 }
 
+function roofOutwardDirection(side: RoofSide): Vector3 {
+  if (side === 'front') return new Vector3(0, 0, 1);
+  if (side === 'back') return new Vector3(0, 0, -1);
+  if (side === 'right') return new Vector3(1, 0, 0);
+  return new Vector3(-1, 0, 0);
+}
+
 function collectTilePlacements(
   dimensions: RoofDimensions,
   quality: QualityLevel,
@@ -189,9 +197,17 @@ function collectTilePlacements(
         const ratio = -0.96 + (1.92 * column) / columns;
         const start = roofPointAt(dimensions, side, ratio, t1, 0.08);
         const end = roofPointAt(dimensions, side, ratio, t2, 0.08);
+        const tangent = end.clone().sub(start).normalize();
+        const acrossStart = roofPointAt(dimensions, side, ratio - 0.01, t, 0.08);
+        const acrossEnd = roofPointAt(dimensions, side, ratio + 0.01, t, 0.08);
+        const normal = new Vector3()
+          .crossVectors(acrossEnd.sub(acrossStart), tangent)
+          .normalize();
+        if (normal.dot(roofOutwardDirection(side)) < 0) normal.multiplyScalar(-1);
         placements.push({
           position: start.clone().lerp(end, 0.5),
-          tangent: end.clone().sub(start).normalize(),
+          tangent,
+          normal,
           side,
           ratio,
           t,
@@ -211,15 +227,20 @@ function createInstancedTiles(
 ): InstancedMesh {
   const geometry = new CylinderGeometry(0.14, 0.16, 1, 6, 1, true, 0, Math.PI);
   const mesh = new InstancedMesh(geometry, material, placements.length);
-  const up = new Vector3(0, 1, 0);
-  const tileRollRadians = -Math.PI / 2;
-  const localRoll = new Quaternion().setFromAxisAngle(up, tileRollRadians);
   const quaternion = new Quaternion();
+  const basis = new Matrix4();
+  const xAxis = new Vector3();
+  const yAxis = new Vector3();
+  const zAxis = new Vector3();
   const matrix = new Matrix4();
   const scale = new Vector3();
   const base = material.color.clone();
   placements.forEach((placement, index) => {
-    quaternion.setFromUnitVectors(up, placement.tangent).multiply(localRoll);
+    yAxis.copy(placement.tangent).normalize();
+    xAxis.copy(placement.normal).projectOnPlane(yAxis).normalize();
+    zAxis.crossVectors(xAxis, yAxis).normalize();
+    basis.makeBasis(xAxis, yAxis, zAxis);
+    quaternion.setFromRotationMatrix(basis);
     scale.set(1, placement.length, 1);
     matrix.compose(placement.position, quaternion, scale);
     mesh.setMatrixAt(index, matrix);
@@ -230,7 +251,8 @@ function createInstancedTiles(
   mesh.userData.kind = kind;
   mesh.userData.instanceCount = placements.length;
   mesh.userData.surfaceOffset = 0.08;
-  mesh.userData.tileRollRadians = tileRollRadians;
+  mesh.userData.tileOrientationMode = 'surface-normal';
+  mesh.userData.tileOpeningDirection = 'toward-roof-surface';
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.computeBoundingBox();

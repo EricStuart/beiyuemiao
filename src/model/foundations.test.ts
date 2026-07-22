@@ -172,8 +172,10 @@ describe('platform layer geometry', () => {
       'terrace-left',
       'terrace-right',
     ]));
-    (['front', 'left', 'right'] as const).forEach((side) => {
-      expect(stairRails.filter((rail) => rail.userData.stairSide === side)).toHaveLength(2);
+    expect(stairRails.filter((rail) => rail.userData.stairSide === 'front')).toHaveLength(2);
+    (['left', 'right'] as const).forEach((side) => {
+      expect(stairRails.filter((rail) => rail.userData.stairSide === side)).toHaveLength(1);
+      expect(stairRails.filter((rail) => rail.userData.stairSide === side)[0]!.userData.railIndex).toBe(1);
     });
   });
 
