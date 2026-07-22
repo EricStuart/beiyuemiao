@@ -200,13 +200,6 @@ function createRoofLevel(dimensions: RoofDimensions, materials: BuildingMaterial
   group.add(createRoofSurface(dimensions, materials.tile, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
   group.add(createTileLines(dimensions, quality, false));
 
-  const eaveBand = new Mesh(new CylinderGeometry(0.2, 0.25, dimensions.width + 0.8, 10), materials.glazedGreen);
-  eaveBand.rotation.z = Math.PI / 2;
-  eaveBand.position.set(0, dimensions.baseY + dimensions.eaveLift + 0.03, dimensions.depth / 2 + 0.1);
-  const rearBand = eaveBand.clone();
-  rearBand.position.z *= -1;
-  group.add(eaveBand, rearBand);
-
   addRidges(group, dimensions, materials);
   return group;
 }

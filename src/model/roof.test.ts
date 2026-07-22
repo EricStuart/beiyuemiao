@@ -1,5 +1,8 @@
+import { CylinderGeometry, Mesh } from 'three';
 import { describe, expect, it } from 'vitest';
-import { createHipRidgePoints, type RoofDimensions } from './roof';
+import { DENING_HALL } from '../data/building';
+import { createBuildingMaterials } from './materials';
+import { createHipRidgePoints, createRoofs, type RoofDimensions } from './roof';
 import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 
 describe('hip ridge alignment', () => {
@@ -26,6 +29,21 @@ describe('hip ridge alignment', () => {
         t,
       ) + evaluateWingLift(1, t);
       expect(point.y - surfaceY).toBeCloseTo(0.16, 5);
+    });
+  });
+
+  it('keeps only the main ridge cylinder on each roof level', () => {
+    const roofs = createRoofs(
+      DENING_HALL,
+      createBuildingMaterials(DENING_HALL),
+      'high',
+    );
+
+    roofs.children.forEach((roofLevel) => {
+      const directCylinders = roofLevel.children.filter(
+        (child) => child instanceof Mesh && child.geometry instanceof CylinderGeometry,
+      );
+      expect(directCylinders).toHaveLength(1);
     });
   });
 });
