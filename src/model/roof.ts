@@ -34,7 +34,7 @@ export interface RoofDimensions {
   ridgeStyle?: 'truncated' | 'simple' | 'chiwen';
 }
 
-export const UPPER_ROOF_DROP = 1.5;
+export const UPPER_ROOF_DROP = 2.5;
 export const UPPER_ROOF_BASE_Y = 16.0 - UPPER_ROOF_DROP;
 
 function profileY(t: number, dimensions: RoofDimensions): number {
@@ -184,7 +184,7 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
   chiwen.name = side < 0 ? '西侧鸱吻' : '东侧鸱吻';
   chiwen.userData.kind = 'chiwen';
   chiwen.userData.level = 'upper';
-  chiwen.userData.profile = 'front-reference';
+  chiwen.userData.profile = 'simplified-front-reference';
 
   const profile = new Shape();
   profile.moveTo(-0.58, 0.22);
@@ -249,70 +249,17 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
     return plate;
   }));
 
-  const head = new Mesh(new SphereGeometry(0.5, 14, 10), materials.glazedGreen);
-  head.name = '鸱吻龙首';
+  const head = new Mesh(new SphereGeometry(0.42, 14, 10), materials.glazedGreen);
+  head.name = '鸱吻简化头部';
   head.userData.kind = 'chiwen-head';
-  head.scale.set(1.28, 1.08, 0.94);
-  head.position.set(-0.58, 1.06, 0);
-  const snout = new Mesh(new SphereGeometry(0.36, 12, 9), materials.gold);
-  snout.name = '鸱吻金色吻部';
-  snout.userData.kind = 'chiwen-snout';
-  snout.scale.set(1.52, 0.7, 0.92);
-  snout.position.set(-0.98, 0.94, 0);
-
-  const upperJaw = new Mesh(new BoxGeometry(0.96, 0.2, 0.56), materials.gold);
-  upperJaw.name = '鸱吻上颌';
-  upperJaw.userData.kind = 'chiwen-upper-jaw';
-  upperJaw.rotation.z = 0.12;
-  upperJaw.position.set(-0.96, 0.78, 0);
-  const lowerJaw = new Mesh(new BoxGeometry(0.88, 0.18, 0.52), materials.gold);
-  lowerJaw.name = '鸱吻下颌';
-  lowerJaw.userData.kind = 'chiwen-lower-jaw';
-  lowerJaw.rotation.z = -0.14;
-  lowerJaw.position.set(-0.88, 0.42, 0);
-  const jawHinge = new Mesh(new SphereGeometry(0.22, 10, 8), materials.gold);
-  jawHinge.name = '鸱吻颌关节';
-  jawHinge.userData.kind = 'chiwen-jaw-hinge';
-  jawHinge.position.set(-0.48, 0.66, 0);
-
-  const horns = [
-    { x: -0.36, y: 1.62, z: 0.12, rotation: 0.58 },
-    { x: -0.06, y: 1.58, z: -0.1, rotation: 0.34 },
-  ].map(({ x, y, z, rotation }, index) => {
-    const horn = new Mesh(new ConeGeometry(0.11, 0.58, 8), materials.gold);
-    horn.name = `鸱吻龙角${index + 1}`;
-    horn.userData.kind = 'chiwen-horn';
-    horn.rotation.z = rotation;
-    horn.position.set(x, y, z);
-    return horn;
-  });
-
-  const eyes: Mesh[] = [];
-  const pupils: Mesh[] = [];
-  for (const zSide of [-1, 1]) {
-    const eye = new Mesh(new SphereGeometry(0.13, 10, 8), materials.stone);
-    eye.name = zSide < 0 ? '鸱吻后侧眼' : '鸱吻前侧眼';
-    eye.userData.kind = 'chiwen-eye';
-    eye.position.set(-0.86, 1.2, zSide * 0.36);
-    const pupil = new Mesh(new SphereGeometry(0.055, 8, 6), materials.darkTimber);
-    pupil.name = zSide < 0 ? '鸱吻后侧瞳孔' : '鸱吻前侧瞳孔';
-    pupil.userData.kind = 'chiwen-pupil';
-    pupil.position.set(-0.9, 1.2, zSide * 0.47);
-    eyes.push(eye);
-    pupils.push(pupil);
-  }
-
-  const whiskers = [-1, 1].map((zSide, index) => {
-    const curve = new CatmullRomCurve3([
-      new Vector3(-1.14, 0.95, zSide * 0.26),
-      new Vector3(-1.34, 1.1, zSide * 0.32),
-      new Vector3(-1.42, 1.36, zSide * 0.36),
-    ]);
-    const whisker = new Mesh(new TubeGeometry(curve, 10, 0.025, 6, false), materials.gold);
-    whisker.name = `鸱吻龙须${index + 1}`;
-    whisker.userData.kind = 'chiwen-whisker';
-    return whisker;
-  });
+  head.scale.set(1.1, 0.9, 0.82);
+  head.position.set(-0.46, 0.94, 0);
+  const mouth = new Mesh(new SphereGeometry(0.28, 12, 9), materials.gold);
+  mouth.name = '鸱吻抽象吻部';
+  mouth.userData.kind = 'chiwen-mouth';
+  mouth.scale.set(1.35, 0.35, 0.75);
+  mouth.rotation.z = 0.08;
+  mouth.position.set(-0.82, 0.67, 0);
 
   chiwen.add(
     base,
@@ -321,16 +268,9 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
     tailTip,
     ...backScales,
     head,
-    snout,
-    upperJaw,
-    lowerJaw,
-    jawHinge,
-    ...horns,
-    ...eyes,
-    ...pupils,
-    ...whiskers,
+    mouth,
   );
-  chiwen.scale.set(side * 1.3, 1.24, 1.3);
+  chiwen.scale.set(side * 1.05, 0.85, 1.05);
   return chiwen;
 }
 

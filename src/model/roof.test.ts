@@ -70,9 +70,9 @@ describe('hip ridge alignment', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
 
-    expect(UPPER_ROOF_BASE_Y).toBeCloseTo(14.5, 5);
-    expect(upper.userData.baseY).toBeCloseTo(14.5, 5);
-    expect(upper.userData.ridgeY).toBeCloseTo(DENING_HALL.upperRidgeHeight - 1.5, 5);
+    expect(UPPER_ROOF_BASE_Y).toBeCloseTo(13.5, 5);
+    expect(upper.userData.baseY).toBeCloseTo(13.5, 5);
+    expect(upper.userData.ridgeY).toBeCloseTo(DENING_HALL.upperRidgeHeight - 2.5, 5);
   });
 
   it('adds four seated ornaments at the middle of the upper hip ridges', () => {
@@ -146,7 +146,7 @@ describe('hip ridge alignment', () => {
       expect(bases).toHaveLength(1);
       ornament.updateWorldMatrix(true, false);
       const baseBounds = new Box3().setFromObject(bases[0]!);
-      expect(baseBounds.getSize(new Vector3()).y).toBeGreaterThan(0.4);
+      expect(baseBounds.getSize(new Vector3()).y).toBeGreaterThan(0.3);
       expect(baseBounds.intersectsBox(mainBounds)).toBe(true);
       const ornamentBounds = new Box3().setFromObject(ornament);
       expect(ornamentBounds.min.x).toBeGreaterThanOrEqual(mainBounds.min.x);
@@ -225,20 +225,19 @@ describe('hip ridge alignment', () => {
         components.set(kind, matches);
       });
 
-      expect(ornament.userData.profile).toBe('front-reference');
+      expect(ornament.userData.profile).toBe('simplified-front-reference');
       expect(components.get('chiwen-body')).toHaveLength(1);
       expect(components.get('chiwen-tail')).toHaveLength(1);
       expect(components.get('chiwen-back-scale')?.length).toBeGreaterThanOrEqual(6);
       expect(components.get('chiwen-head')).toHaveLength(1);
-      expect(components.get('chiwen-upper-jaw')).toHaveLength(1);
-      expect(components.get('chiwen-lower-jaw')).toHaveLength(1);
-      expect(components.get('chiwen-horn')).toHaveLength(2);
-      expect(components.get('chiwen-eye')).toHaveLength(2);
-      expect(components.get('chiwen-pupil')).toHaveLength(2);
-
-      const upperJaw = components.get('chiwen-upper-jaw')![0]!;
-      const lowerJaw = components.get('chiwen-lower-jaw')![0]!;
-      expect(upperJaw.position.y - lowerJaw.position.y).toBeGreaterThan(0.18);
+      expect(components.get('chiwen-mouth')).toHaveLength(1);
+      expect(components.has('chiwen-upper-jaw')).toBe(false);
+      expect(components.has('chiwen-lower-jaw')).toBe(false);
+      expect(components.has('chiwen-jaw-hinge')).toBe(false);
+      expect(components.has('chiwen-horn')).toBe(false);
+      expect(components.has('chiwen-eye')).toBe(false);
+      expect(components.has('chiwen-pupil')).toBe(false);
+      expect(components.has('chiwen-whisker')).toBe(false);
 
       const headBounds = new Box3().setFromObject(components.get('chiwen-head')![0]!);
       const tailBounds = new Box3().setFromObject(components.get('chiwen-tail')![0]!);
@@ -250,7 +249,8 @@ describe('hip ridge alignment', () => {
       const size = bounds.getSize(new Vector3());
       expect(tailBounds.max.y).toBeGreaterThan(headBounds.max.y + 0.35);
       expect(exposedScale).toBe(true);
-      expect(size.y / size.x).toBeGreaterThan(1.35);
+      expect(size.y).toBeLessThan(3.3);
+      expect(size.y / size.x).toBeGreaterThan(1.15);
     });
   });
 });
