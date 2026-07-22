@@ -29,7 +29,7 @@
 - Modify: `src/model/roof.ts`
 
 - [ ] Resize the plaque board to about `2.4 × 3.0m`, resize its four frame members and decorative strips proportionally, and derive its centre from `UPPER_ROOF_BASE_Y` so the complete plaque top remains below the roof base.
-- [ ] Set `UPPER_ROOF_DROP = 1.6`, keeping the upper roof ridge and timber-frame alignment derived from that constant.
+- [ ] Set `UPPER_ROOF_DROP = 1.5`, keeping the upper roof ridge and timber-frame alignment derived from that constant.
 - [ ] Move each chiwen centre inward by at least `1.1m` from the nominal ridge end, preserving mirrored scale and the existing curled profile.
 - [ ] Reuse `createMidRidgeOrnament` for both truncated lower and chiwen upper roofs; tag each ornament with `level`, `xSide`, and `zSide`.
 - [ ] Run the two focused test files and verify all tests pass.

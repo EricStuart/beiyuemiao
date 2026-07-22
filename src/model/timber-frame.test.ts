@@ -2,6 +2,7 @@ import { Box3, Mesh, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
+import { UPPER_ROOF_BASE_Y } from './roof';
 import { createTimberFrame } from './timber-frame';
 
 describe('lower timber frame', () => {
@@ -104,11 +105,23 @@ describe('lower timber frame', () => {
     const horizontalFrame = plaque.getObjectByName('牌匾上下边框');
     const verticalFrame = plaque.getObjectByName('牌匾左右边框');
 
-    expect(size.y / size.x).toBeGreaterThan(1.3);
-    expect(size.y / size.x).toBeLessThan(1.42);
+    expect(size.y / size.x).toBeGreaterThan(1.15);
+    expect(size.y / size.x).toBeLessThan(1.35);
     expect(horizontalFrame?.userData.thickness).toBeGreaterThan(
       verticalFrame?.userData.thickness,
     );
+  });
+
+  it('keeps the complete plaque below the upper roof without oversizing it', () => {
+    const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const plaque = grid.children.find((child) => child.userData.kind === 'plaque')!;
+    const board = plaque.getObjectByName('牌匾绿色底板')!;
+    const boardSize = new Box3().setFromObject(board).getSize(new Vector3());
+    const plaqueBounds = new Box3().setFromObject(plaque);
+
+    expect(boardSize.x).toBeLessThan(2.5);
+    expect(boardSize.y).toBeLessThan(3.2);
+    expect(plaqueBounds.max.y).toBeLessThanOrEqual(UPPER_ROOF_BASE_Y - 0.1);
   });
 
   it('tilts the plaque outward from the upper bracket band', () => {
@@ -248,12 +261,12 @@ describe('lower timber frame', () => {
     const plaqueTop = new Box3().setFromObject(plaque).max.y;
     const hangerTop = new Box3().setFromObject(hanger).max.y;
 
-    expect(upperMaxY).toBeGreaterThan(14.4);
-    expect(upperMaxY).toBeLessThan(14.6);
-    expect(frameBounds.max.y).toBeCloseTo(14.68, 2);
+    expect(Math.abs(upperMaxY - UPPER_ROOF_BASE_Y)).toBeLessThanOrEqual(0.05);
+    expect(frameBounds.min.y).toBeLessThanOrEqual(upperMaxY);
+    expect(frameBounds.max.y).toBeGreaterThanOrEqual(upperMaxY);
     expect(upperMaxY).toBeGreaterThanOrEqual(frameBounds.min.y - 0.12);
-    expect(plaqueTop).toBeLessThan(14.6);
-    expect(hangerTop).toBeLessThan(14.6);
+    expect(plaqueTop).toBeLessThanOrEqual(UPPER_ROOF_BASE_Y - 0.1);
+    expect(hangerTop).toBeLessThan(UPPER_ROOF_BASE_Y);
   });
 
   it('removes every upper enclosure wall and mullion', () => {

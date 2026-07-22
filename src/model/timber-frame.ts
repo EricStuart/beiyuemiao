@@ -196,33 +196,33 @@ function createPlaque(materials: BuildingMaterials): Group {
   plaque.name = '德宁之殿牌匾';
   plaque.userData.kind = 'plaque';
 
-  const board = beam(2.8, 3.8, 0.28, materials.paintedGreen);
+  const board = beam(2.4, 3.0, 0.26, materials.paintedGreen);
   board.name = '牌匾绿色底板';
   board.userData.aspect = 'vertical';
-  const topFrame = beam(3.3, 0.32, 0.42, materials.timber);
+  const topFrame = beam(2.85, 0.28, 0.4, materials.timber);
   topFrame.name = '牌匾上下边框';
-  topFrame.userData.thickness = 0.32;
-  topFrame.position.y = 2.04;
+  topFrame.userData.thickness = 0.28;
+  topFrame.position.y = 1.64;
   const bottomFrame = topFrame.clone();
-  bottomFrame.position.y = -2.04;
-  const leftFrame = beam(0.2, 4.14, 0.42, materials.timber);
+  bottomFrame.position.y = -1.64;
+  const leftFrame = beam(0.18, 3.28, 0.4, materials.timber);
   leftFrame.name = '牌匾左右边框';
-  leftFrame.userData.thickness = 0.2;
-  leftFrame.position.x = -1.52;
+  leftFrame.userData.thickness = 0.18;
+  leftFrame.position.x = -1.31;
   const rightFrame = leftFrame.clone();
-  rightFrame.position.x = 1.52;
-  const goldTop = beam(2.65, 0.1, 0.08, materials.gold);
-  goldTop.position.set(0, 1.82, 0.19);
+  rightFrame.position.x = 1.31;
+  const goldTop = beam(2.25, 0.08, 0.08, materials.gold);
+  goldTop.position.set(0, 1.42, 0.18);
   const goldBottom = goldTop.clone();
-  goldBottom.position.y = -1.82;
+  goldBottom.position.y = -1.42;
   plaque.add(board, topFrame, bottomFrame, leftFrame, rightFrame, goldTop, goldBottom);
 
   for (const side of [-1, 1]) {
-    const pendant = beam(0.34, 1.05, 0.34, materials.timber);
-    pendant.position.set(side * 1.54, -2.5, 0);
+    const pendant = beam(0.3, 0.85, 0.32, materials.timber);
+    pendant.position.set(side * 1.32, -2.02, 0);
     pendant.rotation.z = side * 0.18;
-    const wing = beam(0.72, 0.22, 0.35, materials.timber);
-    wing.position.set(side * 1.7, 2.08, 0);
+    const wing = beam(0.62, 0.2, 0.34, materials.timber);
+    wing.position.set(side * 1.43, 1.67, 0);
     wing.rotation.z = side * 0.12;
     plaque.add(pendant, wing);
   }
@@ -388,14 +388,14 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
 
   const plaque = createPlaque(materials);
   const plaqueZ = upperFront + 2.1;
-  plaque.position.set(0, UPPER_ROOF_BASE_Y - 2.25, plaqueZ);
+  plaque.position.set(0, UPPER_ROOF_BASE_Y - 2.0, plaqueZ);
   plaque.rotation.x = Math.PI / 20;
   plaque.userData.outwardTiltDegrees = 9;
-  const plaqueHangerBeam = beam(4.6, 0.28, 0.42, materials.darkTimber);
+  const plaqueHangerBeam = beam(3.8, 0.28, 0.42, materials.darkTimber);
   plaqueHangerBeam.name = '牌匾悬挂横梁';
   plaqueHangerBeam.userData.kind = 'plaque-hanger-beam';
   plaqueHangerBeam.position.set(0, UPPER_ROOF_BASE_Y - 0.16, plaqueZ);
-  const plaqueHangerRods = [-0.9, 0.9].map((x) => {
+  const plaqueHangerRods = [-0.75, 0.75].map((x) => {
     const rod = beam(0.18, 0.78, 0.18, materials.timber);
     rod.name = '牌匾吊杆';
     rod.userData.kind = 'plaque-hanger-rod';

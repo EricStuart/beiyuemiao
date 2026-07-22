@@ -34,7 +34,7 @@ export interface RoofDimensions {
   ridgeStyle?: 'truncated' | 'simple' | 'chiwen';
 }
 
-export const UPPER_ROOF_DROP = 1.4;
+export const UPPER_ROOF_DROP = 1.5;
 export const UPPER_ROOF_BASE_Y = 16.0 - UPPER_ROOF_DROP;
 
 function profileY(t: number, dimensions: RoofDimensions): number {
@@ -229,11 +229,14 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
   return chiwen;
 }
 
-function createMidRidgeOrnament(materials: BuildingMaterials): Group {
+function createMidRidgeOrnament(
+  materials: BuildingMaterials,
+  level: 'lower' | 'upper',
+): Group {
   const ornament = new Group();
-  ornament.name = '斜脊中段脊兽';
+  ornament.name = level === 'lower' ? '下檐斜脊中段脊兽' : '上檐斜脊中段脊兽';
   ornament.userData.kind = 'mid-ridge-ornament';
-  ornament.userData.level = 'upper';
+  ornament.userData.level = level;
 
   const base = new Mesh(new BoxGeometry(0.68, 0.16, 0.42), materials.glazedGreen);
   base.userData.kind = 'mid-ridge-ornament-base';
@@ -249,6 +252,7 @@ function createMidRidgeOrnament(materials: BuildingMaterials): Group {
   const eye = new Mesh(new SphereGeometry(0.05, 8, 6), materials.gold);
   eye.position.set(0.36, 0.56, 0.14);
   ornament.add(base, body, head, crest, eye);
+  if (level === 'lower') ornament.scale.setScalar(0.86);
   return ornament;
 }
 
@@ -299,13 +303,14 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
       hip.userData.zSide = zSide;
       group.add(hip);
 
-      if (dimensions.ridgeStyle === 'chiwen') {
+      if (dimensions.ridgeStyle === 'chiwen' || dimensions.ridgeStyle === 'truncated') {
         const midpointIndex = Math.floor(hipPoints.length / 2);
         const midpoint = hipPoints[midpointIndex]!;
         const previous = hipPoints[Math.max(0, midpointIndex - 1)]!;
         const next = hipPoints[Math.min(hipPoints.length - 1, midpointIndex + 1)]!;
         const tangent = next.clone().sub(previous).normalize();
-        const ornament = createMidRidgeOrnament(materials);
+        const ornamentLevel = dimensions.ridgeStyle === 'truncated' ? 'lower' : 'upper';
+        const ornament = createMidRidgeOrnament(materials, ornamentLevel);
         ornament.position.copy(midpoint);
         ornament.rotation.y = Math.atan2(-tangent.z, tangent.x);
         ornament.userData.xSide = xSide;
@@ -319,7 +324,7 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
     if (dimensions.ridgeStyle === 'truncated') continue;
     if (dimensions.ridgeStyle === 'chiwen') {
       const chiwen = createChiwen(side, materials);
-      chiwen.position.set(side * (ridgeHalf + 0.32), ridgeY + 0.22, 0);
+      chiwen.position.set(side * (ridgeHalf - 1.15), ridgeY + 0.22, 0);
       group.add(chiwen);
     } else {
       const ornament = new Group();

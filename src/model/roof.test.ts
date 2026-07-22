@@ -2,7 +2,12 @@ import { Box3, CylinderGeometry, Mesh, Object3D, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
-import { createHipRidgePoints, createRoofs, type RoofDimensions } from './roof';
+import {
+  createHipRidgePoints,
+  createRoofs,
+  UPPER_ROOF_BASE_Y,
+  type RoofDimensions,
+} from './roof';
 import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 
 describe('hip ridge alignment', () => {
@@ -65,8 +70,9 @@ describe('hip ridge alignment', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
 
-    expect(upper.userData.baseY).toBeCloseTo(14.6, 5);
-    expect(upper.userData.ridgeY).toBeCloseTo(DENING_HALL.upperRidgeHeight - 1.4, 5);
+    expect(UPPER_ROOF_BASE_Y).toBeCloseTo(14.5, 5);
+    expect(upper.userData.baseY).toBeCloseTo(14.5, 5);
+    expect(upper.userData.ridgeY).toBeCloseTo(DENING_HALL.upperRidgeHeight - 1.5, 5);
   });
 
   it('adds four seated ornaments at the middle of the upper hip ridges', () => {
@@ -76,6 +82,28 @@ describe('hip ridge alignment', () => {
       (child) => child.userData.kind === 'mid-ridge-ornament',
     );
     const hipRidges = upper.children.filter((child) => child.userData.kind === 'hip-ridge');
+
+    expect(ornaments).toHaveLength(4);
+    ornaments.forEach((ornament) => {
+      const hip = hipRidges.find(
+        (ridge) => ridge.userData.xSide === ornament.userData.xSide
+          && ridge.userData.zSide === ornament.userData.zSide,
+      );
+      expect(hip).toBeDefined();
+      expect(new Box3().setFromObject(ornament).intersectsBox(
+        new Box3().setFromObject(hip!),
+      )).toBe(true);
+    });
+  });
+
+  it('adds four seated ornaments at the middle of the lower hip ridges', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    const lower = roofs.children.find((child) => child.name === '下檐庑殿顶')!;
+    const ornaments = lower.children.filter(
+      (child) => child.userData.kind === 'mid-ridge-ornament'
+        && child.userData.level === 'lower',
+    );
+    const hipRidges = lower.children.filter((child) => child.userData.kind === 'hip-ridge');
 
     expect(ornaments).toHaveLength(4);
     ornaments.forEach((ornament) => {
@@ -120,6 +148,9 @@ describe('hip ridge alignment', () => {
       const baseBounds = new Box3().setFromObject(bases[0]!);
       expect(baseBounds.getSize(new Vector3()).y).toBeGreaterThan(0.4);
       expect(baseBounds.intersectsBox(mainBounds)).toBe(true);
+      const ornamentBounds = new Box3().setFromObject(ornament);
+      expect(ornamentBounds.min.x).toBeGreaterThanOrEqual(mainBounds.min.x);
+      expect(ornamentBounds.max.x).toBeLessThanOrEqual(mainBounds.max.x);
     });
   });
 
