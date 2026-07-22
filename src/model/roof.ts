@@ -34,6 +34,9 @@ export interface RoofDimensions {
   ridgeStyle?: 'truncated' | 'simple' | 'chiwen';
 }
 
+export const UPPER_ROOF_DROP = 1.4;
+export const UPPER_ROOF_BASE_Y = 16.0 - UPPER_ROOF_DROP;
+
 function profileY(t: number, dimensions: RoofDimensions): number {
   return dimensions.baseY + evaluateRaisedEaveHeight(
     {
@@ -203,7 +206,9 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
   });
   bodyGeometry.translate(0, 0, -0.25);
   const body = new Mesh(bodyGeometry, materials.glazedGreen);
-  const base = new Mesh(new BoxGeometry(1.9, 0.34, 0.78), materials.glazedGreen);
+  const base = new Mesh(new BoxGeometry(2.0, 0.46, 0.82), materials.glazedGreen);
+  base.name = '鸱吻底座';
+  base.userData.kind = 'chiwen-base';
   base.position.y = 0.12;
   const eye = new Mesh(new SphereGeometry(0.13, 10, 8), materials.gold);
   eye.position.set(0.38, 2.1, 0.31);
@@ -224,11 +229,34 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
   return chiwen;
 }
 
+function createMidRidgeOrnament(materials: BuildingMaterials): Group {
+  const ornament = new Group();
+  ornament.name = '斜脊中段脊兽';
+  ornament.userData.kind = 'mid-ridge-ornament';
+  ornament.userData.level = 'upper';
+
+  const base = new Mesh(new BoxGeometry(0.68, 0.16, 0.42), materials.glazedGreen);
+  base.userData.kind = 'mid-ridge-ornament-base';
+  const body = new Mesh(new SphereGeometry(0.24, 10, 8), materials.glazedGreen);
+  body.scale.set(1.05, 1.28, 0.78);
+  body.position.y = 0.28;
+  const head = new Mesh(new SphereGeometry(0.18, 10, 8), materials.glazedGreen);
+  head.scale.set(1.25, 0.92, 0.85);
+  head.position.set(0.25, 0.52, 0);
+  const crest = new Mesh(new ConeGeometry(0.1, 0.4, 8), materials.glazedGreen);
+  crest.rotation.z = -0.55;
+  crest.position.set(0.1, 0.68, 0);
+  const eye = new Mesh(new SphereGeometry(0.05, 8, 6), materials.gold);
+  eye.position.set(0.36, 0.56, 0.14);
+  ornament.add(base, body, head, crest, eye);
+  return ornament;
+}
+
 function addRidges(group: Group, dimensions: RoofDimensions, materials: BuildingMaterials): void {
   const ridgeY = dimensions.ridgeY + 0.25;
   const ridgeHalf = dimensions.ridgeLength / 2;
   if (dimensions.ridgeStyle !== 'truncated') {
-    const main = new Mesh(new CylinderGeometry(0.3, 0.36, dimensions.ridgeLength + 1.2, 12), materials.glazedGreen);
+    const main = new Mesh(new CylinderGeometry(0.4, 0.48, dimensions.ridgeLength + 1.2, 12), materials.glazedGreen);
     main.name = `${dimensions.name}主脊`;
     main.userData.kind = 'main-ridge';
     main.rotation.z = Math.PI / 2;
@@ -238,7 +266,7 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
 
   if (dimensions.ridgeStyle === 'chiwen') {
     const ridgeBand = new Mesh(
-      new BoxGeometry(dimensions.ridgeLength + 0.5, 0.58, 0.36),
+      new BoxGeometry(dimensions.ridgeLength + 0.5, 0.78, 0.42),
       materials.glazedGreen,
     );
     ridgeBand.name = '上层琉璃正脊带';
@@ -259,14 +287,31 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
 
   for (const xSide of [-1, 1]) {
     for (const zSide of [-1, 1]) {
+      const hipPoints = createHipRidgePoints(dimensions, xSide, zSide);
       const hip = createRidgeTube(
-        createHipRidgePoints(dimensions, xSide, zSide),
+        hipPoints,
         0.22,
         materials.glazedGreen,
       );
       hip.name = `${dimensions.name}角脊`;
       hip.userData.kind = 'hip-ridge';
+      hip.userData.xSide = xSide;
+      hip.userData.zSide = zSide;
       group.add(hip);
+
+      if (dimensions.ridgeStyle === 'chiwen') {
+        const midpointIndex = Math.floor(hipPoints.length / 2);
+        const midpoint = hipPoints[midpointIndex]!;
+        const previous = hipPoints[Math.max(0, midpointIndex - 1)]!;
+        const next = hipPoints[Math.min(hipPoints.length - 1, midpointIndex + 1)]!;
+        const tangent = next.clone().sub(previous).normalize();
+        const ornament = createMidRidgeOrnament(materials);
+        ornament.position.copy(midpoint);
+        ornament.rotation.y = Math.atan2(-tangent.z, tangent.x);
+        ornament.userData.xSide = xSide;
+        ornament.userData.zSide = zSide;
+        group.add(ornament);
+      }
     }
   }
 
@@ -294,6 +339,8 @@ function createRoofLevel(dimensions: RoofDimensions, materials: BuildingMaterial
   const group = new Group();
   group.name = dimensions.name;
   group.userData.roofForm = dimensions.ridgeStyle === 'truncated' ? 'truncated-hip' : 'hip';
+  group.userData.baseY = dimensions.baseY;
+  group.userData.ridgeY = dimensions.ridgeY;
   group.add(createRoofSurface(dimensions, materials.tile, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
   group.add(createTileLines(dimensions, quality, false));
 
@@ -329,8 +376,8 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
         width: data.planWidth.value * 0.82 + 6.5,
         depth: data.planDepth.value * 0.68 + 7,
         ridgeLength: data.planWidth.value * 0.48,
-        baseY: 16.0,
-        ridgeY: data.upperRidgeHeight,
+        baseY: UPPER_ROOF_BASE_Y,
+        ridgeY: data.upperRidgeHeight - UPPER_ROOF_DROP,
         eaveLift: 0.72,
         ridgeStyle: 'chiwen',
       },

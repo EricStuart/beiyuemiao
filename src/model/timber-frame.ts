@@ -8,6 +8,7 @@ import {
 import type { BuildingData } from '../data/building';
 import { createAxisCoordinates } from './grid';
 import type { BuildingMaterials } from './materials';
+import { UPPER_ROOF_BASE_Y } from './roof';
 
 export interface TimberFrameResult {
   grid: Group;
@@ -71,6 +72,7 @@ function addBracketSet(
     stageGroup.userData.kind = 'bracket-stage';
     stageGroup.userData.stage = stage;
     stageGroup.userData.width = width;
+    stageGroup.userData.depth = depth;
     const dou = beam(width * 0.42, 0.22, Math.min(depth * 0.5, 0.78), materials.paintedBlue);
     const transverse = beam(width, 0.22, 0.34, materials.timber);
     const projecting = beam(0.34, 0.22, depth, materials.darkTimber);
@@ -81,9 +83,9 @@ function addBracketSet(
     set.add(stageGroup);
   });
   const roleScale = role === 'intercolumn' ? 0.82 : 1;
-  const verticalScale = level === 'upper'
-    ? (role === 'intercolumn' ? 1.72 : 1.85)
-    : (role === 'intercolumn' ? 0.92 : 1);
+  const verticalScale = role === 'intercolumn' ? 0.92 : 1;
+  set.userData.roleScale = roleScale;
+  set.userData.verticalScale = verticalScale;
   set.scale.set(roleScale, verticalScale, roleScale);
   group.add(set);
 }
@@ -247,11 +249,45 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   const frontZ = zAxis.at(-1) ?? 0;
   const rearZ = zAxis[0] ?? 0;
   const fullWidth = data.planWidth.value + 0.8;
-  for (const z of [frontZ, rearZ]) {
+  const frontRearSides = [
+    { side: 'front' as const, coordinate: frontZ },
+    { side: 'rear' as const, coordinate: rearZ },
+  ];
+  for (const { side, coordinate } of frontRearSides) {
     const lowerBeam = beam(fullWidth, 0.48, 0.54, materials.darkTimber);
-    lowerBeam.position.set(0, outerTop - 0.15, z);
+    lowerBeam.name = `首层${side}柱头梁`;
+    lowerBeam.userData.level = 'lower';
+    lowerBeam.userData.side = side;
+    lowerBeam.userData.kind = 'lower-column-head-beam';
+    lowerBeam.position.set(0, outerTop - 0.15, coordinate);
     const paintedBeam = beam(fullWidth + 0.7, 0.42, 0.6, materials.paintedGreen);
-    paintedBeam.position.set(0, outerTop + 0.35, z);
+    paintedBeam.name = `首层${side}柱头枋`;
+    paintedBeam.userData.level = 'lower';
+    paintedBeam.userData.side = side;
+    paintedBeam.userData.kind = 'lower-column-head-cap';
+    paintedBeam.position.set(0, outerTop + 0.35, coordinate);
+    grid.add(lowerBeam, paintedBeam);
+  }
+  const fullDepth = data.planDepth.value + 0.8;
+  const leftX = xAxis[0] ?? 0;
+  const rightX = xAxis.at(-1) ?? 0;
+  const leftRightSides = [
+    { side: 'left' as const, coordinate: leftX },
+    { side: 'right' as const, coordinate: rightX },
+  ];
+  for (const { side, coordinate } of leftRightSides) {
+    const lowerBeam = beam(0.54, 0.48, fullDepth, materials.darkTimber);
+    lowerBeam.name = `首层${side}柱头梁`;
+    lowerBeam.userData.level = 'lower';
+    lowerBeam.userData.side = side;
+    lowerBeam.userData.kind = 'lower-column-head-beam';
+    lowerBeam.position.set(coordinate, outerTop - 0.15, 0);
+    const paintedBeam = beam(0.6, 0.42, fullDepth + 0.7, materials.paintedGreen);
+    paintedBeam.name = `首层${side}柱头枋`;
+    paintedBeam.userData.level = 'lower';
+    paintedBeam.userData.side = side;
+    paintedBeam.userData.kind = 'lower-column-head-cap';
+    paintedBeam.position.set(coordinate, outerTop + 0.35, 0);
     grid.add(lowerBeam, paintedBeam);
   }
   const lowerBracketBaseY = outerTop + 0.58;
@@ -319,7 +355,7 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     upperRight,
     upperRear,
     upperFront,
-    15.89,
+    UPPER_ROOF_BASE_Y - 0.11,
     0.38,
     materials.darkTimber,
   );
@@ -352,18 +388,18 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
 
   const plaque = createPlaque(materials);
   const plaqueZ = upperFront + 2.1;
-  plaque.position.set(0, 13.75, plaqueZ);
+  plaque.position.set(0, UPPER_ROOF_BASE_Y - 2.25, plaqueZ);
   plaque.rotation.x = Math.PI / 20;
   plaque.userData.outwardTiltDegrees = 9;
   const plaqueHangerBeam = beam(4.6, 0.28, 0.42, materials.darkTimber);
   plaqueHangerBeam.name = '牌匾悬挂横梁';
   plaqueHangerBeam.userData.kind = 'plaque-hanger-beam';
-  plaqueHangerBeam.position.set(0, 15.88, plaqueZ);
+  plaqueHangerBeam.position.set(0, UPPER_ROOF_BASE_Y - 0.16, plaqueZ);
   const plaqueHangerRods = [-0.9, 0.9].map((x) => {
     const rod = beam(0.18, 0.78, 0.18, materials.timber);
     rod.name = '牌匾吊杆';
     rod.userData.kind = 'plaque-hanger-rod';
-    rod.position.set(x, 15.58, plaqueZ);
+    rod.position.set(x, UPPER_ROOF_BASE_Y - 0.46, plaqueZ);
     return rod;
   });
   grid.add(plaque, plaqueHangerBeam, ...plaqueHangerRods);

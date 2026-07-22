@@ -180,7 +180,62 @@ describe('lower timber frame', () => {
     });
   });
 
-  it('stretches the upper bracket band to meet the upper roof without trapping the plaque', () => {
+  it('wraps all four lower column-head elevations with matching beams and caps', () => {
+    const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const members = grid.children.filter(
+      (child) => child instanceof Mesh
+        && (child.userData.kind === 'lower-column-head-beam'
+          || child.userData.kind === 'lower-column-head-cap'),
+    ) as Mesh[];
+    const counts = {
+      beam: { front: 0, rear: 0, left: 0, right: 0 },
+      cap: { front: 0, rear: 0, left: 0, right: 0 },
+    };
+
+    members.forEach((member) => {
+      const role = member.userData.kind === 'lower-column-head-beam' ? 'beam' : 'cap';
+      const side = member.userData.side as keyof typeof counts.beam;
+      counts[role][side] += 1;
+    });
+
+    expect(counts.beam).toEqual({ front: 1, rear: 1, left: 1, right: 1 });
+    expect(counts.cap).toEqual({ front: 1, rear: 1, left: 1, right: 1 });
+
+    const frontBeam = members.find(
+      (member) => member.userData.kind === 'lower-column-head-beam'
+        && member.userData.side === 'front',
+    )!;
+    const sideBeam = members.find(
+      (member) => member.userData.kind === 'lower-column-head-beam'
+        && member.userData.side === 'right',
+    )!;
+    const frontSize = new Box3().setFromObject(frontBeam).getSize(new Vector3());
+    const sideSize = new Box3().setFromObject(sideBeam).getSize(new Vector3());
+    expect(frontSize.x).toBeGreaterThan(frontSize.z * 10);
+    expect(sideSize.z).toBeGreaterThan(sideSize.x * 10);
+  });
+
+  it('uses the same bracket module and vertical scale on both storeys', () => {
+    const { brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const lower = brackets.children.find(
+      (child) => child.userData.level === 'lower' && child.userData.role === 'column',
+    )!;
+    const upper = brackets.children.find(
+      (child) => child.userData.level === 'upper' && child.userData.role === 'column',
+    )!;
+    const moduleOf = (set: typeof lower) => set.children
+      .filter((child) => child.userData.kind === 'bracket-stage')
+      .map((stage) => ({
+        width: stage.userData.width,
+        depth: stage.userData.depth,
+      }));
+
+    expect(moduleOf(upper)).toEqual(moduleOf(lower));
+    expect(upper.scale.y).toBeCloseTo(lower.scale.y, 5);
+    expect(upper.scale.y).toBeCloseTo(1, 5);
+  });
+
+  it('seats the upper bracket band under the lowered roof without trapping the plaque', () => {
     const { grid, brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const upper = brackets.children.filter(
       (child) => child.userData.level === 'upper' && child.userData.kind === 'bracket',
@@ -193,11 +248,12 @@ describe('lower timber frame', () => {
     const plaqueTop = new Box3().setFromObject(plaque).max.y;
     const hangerTop = new Box3().setFromObject(hanger).max.y;
 
-    expect(upperMaxY).toBeGreaterThan(15.6);
-    expect(frameBounds.max.y).toBeCloseTo(16.08, 1);
+    expect(upperMaxY).toBeGreaterThan(14.4);
+    expect(upperMaxY).toBeLessThan(14.6);
+    expect(frameBounds.max.y).toBeCloseTo(14.68, 2);
     expect(upperMaxY).toBeGreaterThanOrEqual(frameBounds.min.y - 0.12);
-    expect(plaqueTop).toBeLessThan(16.08);
-    expect(hangerTop).toBeLessThan(16.08);
+    expect(plaqueTop).toBeLessThan(14.6);
+    expect(hangerTop).toBeLessThan(14.6);
   });
 
   it('removes every upper enclosure wall and mullion', () => {
