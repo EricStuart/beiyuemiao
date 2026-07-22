@@ -51,8 +51,8 @@ export const DENING_HALL: BuildingData = {
   location: '河北省保定市曲阳县北岳庙',
   facadeBays: 9,
   depthBays: 6,
-  bayWidths: [0.78, 0.9, 1, 1.08, 1.16, 1.08, 1, 0.9, 0.78],
-  depthWidths: [0.82, 1, 1.08, 1.08, 1, 0.82],
+  bayWidths: [24.95, 33.05, 34.9, 33.85, 33.5, 33.85, 34.9, 33.05, 24.95],
+  depthWidths: [24.4, 31.55, 32, 32, 31.55, 24.4],
   totalHeight: {
     value: 25.6,
     unit: 'm',

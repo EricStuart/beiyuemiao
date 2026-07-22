@@ -11,6 +11,22 @@ describe('Dening Hall grid', () => {
     expect(createAxisCoordinates(DENING_HALL.depthWidths)).toHaveLength(7);
   });
 
+  it('uses the mirrored pixel-traced spacing from the standard plan', () => {
+    expect(DENING_HALL.bayWidths).toEqual([
+      24.95, 33.05, 34.9, 33.85, 33.5, 33.85, 34.9, 33.05, 24.95,
+    ]);
+    expect(DENING_HALL.depthWidths).toEqual([
+      24.4, 31.55, 32, 32, 31.55, 24.4,
+    ]);
+
+    DENING_HALL.bayWidths.forEach((width, index, widths) => {
+      expect(width).toBeCloseTo(widths[widths.length - 1 - index]!, 6);
+    });
+    DENING_HALL.depthWidths.forEach((width, index, widths) => {
+      expect(width).toBeCloseTo(widths[widths.length - 1 - index]!, 6);
+    });
+  });
+
   it('keeps the documented total height', () => {
     expect(() => validateBuildingData(DENING_HALL)).not.toThrow();
     expect(DENING_HALL.totalHeight.value).toBe(25.6);
