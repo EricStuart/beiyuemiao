@@ -37,6 +37,7 @@ export function createDeningHall(quality: QualityLevel): DeningHallModel {
       width: DENING_HALL.planWidth.value,
       depth: DENING_HALL.planDepth.value,
     },
+    doors: timber.doors,
     dispose: () => {
       root.traverse((object) => {
         if (object instanceof Mesh && object.geometry instanceof BufferGeometry) object.geometry.dispose();

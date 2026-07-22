@@ -18,6 +18,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createDeningHall } from '../model/create-dening-hall';
 import type { InspectionLayer, QualityLevel } from '../model/types';
+import { DoorAnimationController } from './door-animation';
 import { ORBIT_CONTROL_LIMITS } from './orbit-config';
 import { createViewPresets, type ViewPreset } from './view-presets';
 
@@ -45,6 +46,7 @@ export class DeningHallViewer {
   readonly diagnostics: ViewerDiagnostics;
 
   private readonly building;
+  private readonly doorAnimation: DoorAnimationController;
   private readonly sunnyLight: DirectionalLight;
   private readonly fillLight: HemisphereLight;
   private readonly raycaster = new Raycaster();
@@ -89,6 +91,7 @@ export class DeningHallViewer {
     this.controls.target.set(0, 10, 0);
 
     this.building = createDeningHall(quality);
+    this.doorAnimation = new DoorAnimationController(this.building.doors);
     this.scene.add(this.building.root);
 
     this.fillLight = new HemisphereLight(0xd8e8e2, 0x5d5848, 2.25);
@@ -247,6 +250,7 @@ export class DeningHallViewer {
       this.controls.target.lerpVectors(this.viewAnimation.targetFrom, this.viewAnimation.targetTo, eased);
       if (progress >= 1) this.viewAnimation = undefined;
     }
+    this.doorAnimation.update(time);
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
     this.diagnostics.frames += 1;

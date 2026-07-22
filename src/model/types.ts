@@ -1,4 +1,5 @@
 import { Mesh, type Box3, type Group, type Object3D } from 'three';
+import type { DoorLeafBinding } from './doors';
 
 export type QualityLevel = 'low' | 'medium' | 'high';
 export type InspectionLayer = 'full' | 'grid' | 'roof' | 'brackets';
@@ -13,6 +14,10 @@ export interface DeningHallModel {
     height: number;
     width: number;
     depth: number;
+  };
+  doors: {
+    front: DoorLeafBinding[];
+    rear: DoorLeafBinding[];
   };
   dispose: () => void;
 }
