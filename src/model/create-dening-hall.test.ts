@@ -38,7 +38,7 @@ describe('Dening Hall assembly', () => {
     const upperBrackets = building.layers.get('brackets')?.children.filter(
       (child) => child.userData.level === 'upper',
     );
-    expect(upperBrackets).toHaveLength(48);
+    expect(upperBrackets).toHaveLength(70);
     expect(upperBrackets?.every((child) => child.userData.stageCount === 4)).toBe(true);
     expect(building.layers.get('grid')?.getObjectByName('二层斗栱转换梁架')).toBeDefined();
     expect(building.layers.get('grid')?.getObjectByName('二层斗栱承檐梁架')).toBeDefined();

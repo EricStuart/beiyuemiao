@@ -162,7 +162,7 @@ describe('lower timber frame', () => {
       (child) => child.userData.level === 'upper' && child.userData.kind === 'bracket',
     );
 
-    expect(upperBrackets).toHaveLength(48);
+    expect(upperBrackets).toHaveLength(70);
     expect(upperBrackets.every((set) => set.userData.stageCount === 4)).toBe(true);
     upperBrackets.forEach((set) => {
       const stages = set.children.filter((child) => child.userData.kind === 'bracket-stage');
@@ -294,7 +294,7 @@ describe('lower timber frame', () => {
     });
 
     expect(upperColumns).toHaveLength(0);
-    expect(sideCounts).toEqual({ front: 15, rear: 15, left: 9, right: 9 });
+    expect(sideCounts).toEqual({ front: 22, rear: 22, left: 13, right: 13 });
     (Object.keys(sideCounts) as Array<keyof typeof sideCounts>).forEach((side) => {
       expect(upperBrackets.some(
         (set) => set.userData.side === side && set.userData.role === 'column',
@@ -316,7 +316,7 @@ describe('lower timber frame', () => {
       counts[set.userData.side as keyof typeof counts] += 1;
     });
 
-    expect(counts).toEqual({ left: 13, right: 13 });
+    expect(counts).toEqual({ left: 17, right: 17 });
     expect(lowerSideSets.some((set) => set.userData.role === 'column')).toBe(true);
     expect(lowerSideSets.some((set) => set.userData.role === 'intercolumn')).toBe(true);
   });
@@ -329,12 +329,114 @@ describe('lower timber frame', () => {
       counts[set.userData.side as keyof typeof counts] += 1;
     });
 
-    expect(counts).toEqual({ front: 19, rear: 19, left: 13, right: 13 });
+    expect(counts).toEqual({ front: 26, rear: 26, left: 17, right: 17 });
     expect(lower.some(
       (set) => set.userData.side === 'front' && set.userData.role === 'intercolumn',
     )).toBe(true);
     expect(lower.some(
       (set) => set.userData.side === 'rear' && set.userData.role === 'intercolumn',
     )).toBe(true);
+  });
+
+  it('uses the measured column and intercolumn split on every elevation', () => {
+    const { brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const expected = {
+      lower: {
+        front: { column: 10, intercolumn: 16 },
+        rear: { column: 10, intercolumn: 16 },
+        left: { column: 7, intercolumn: 10 },
+        right: { column: 7, intercolumn: 10 },
+      },
+      upper: {
+        front: { column: 8, intercolumn: 14 },
+        rear: { column: 8, intercolumn: 14 },
+        left: { column: 5, intercolumn: 8 },
+        right: { column: 5, intercolumn: 8 },
+      },
+    } as const;
+    const actual = {
+      lower: {
+        front: { column: 0, intercolumn: 0 },
+        rear: { column: 0, intercolumn: 0 },
+        left: { column: 0, intercolumn: 0 },
+        right: { column: 0, intercolumn: 0 },
+      },
+      upper: {
+        front: { column: 0, intercolumn: 0 },
+        rear: { column: 0, intercolumn: 0 },
+        left: { column: 0, intercolumn: 0 },
+        right: { column: 0, intercolumn: 0 },
+      },
+    };
+
+    brackets.children
+      .filter((child) => child.userData.kind === 'bracket')
+      .forEach((set) => {
+        const level = set.userData.level as keyof typeof actual;
+        const side = set.userData.side as keyof typeof actual.lower;
+        const role = set.userData.role as keyof typeof actual.lower.front;
+        actual[level][side][role] += 1;
+      });
+
+    expect(actual).toEqual(expected);
+  });
+
+  it('aligns upper front column brackets to the lower inner column grid', () => {
+    const { brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const lowerFrontColumns = brackets.children
+      .filter((child) => child.userData.level === 'lower'
+        && child.userData.side === 'front'
+        && child.userData.role === 'column')
+      .map((set) => set.position.x)
+      .sort((a, b) => a - b);
+    const upperFrontColumns = brackets.children
+      .filter((child) => child.userData.level === 'upper'
+        && child.userData.side === 'front'
+        && child.userData.role === 'column')
+      .map((set) => set.position.x)
+      .sort((a, b) => a - b);
+
+    expect(upperFrontColumns).toEqual(lowerFrontColumns.slice(1, -1));
+  });
+
+  it('places intercolumn brackets at bay midpoints or one-third points', () => {
+    const { brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const collectCoordinates = (
+      level: 'lower' | 'upper',
+      side: 'front' | 'left',
+      role: 'column' | 'intercolumn',
+    ) => brackets.children
+      .filter((child) => child.userData.level === level
+        && child.userData.side === side
+        && child.userData.role === role)
+      .map((set) => side === 'front' ? set.position.x : set.position.z)
+      .sort((a, b) => a - b);
+    const expectedIntercolumn = (axis: readonly number[], singleOuterBays: boolean) => (
+      axis.slice(0, -1).flatMap((start, index) => {
+        const end = axis[index + 1];
+        if (end === undefined) return [];
+        const span = end - start;
+        const isOuter = index === 0 || index === axis.length - 2;
+        return singleOuterBays && isOuter
+          ? [start + span / 2]
+          : [start + span / 3, start + (span * 2) / 3];
+      })
+    );
+    const cases = [
+      { level: 'lower', side: 'front', singleOuterBays: true },
+      { level: 'lower', side: 'left', singleOuterBays: true },
+      { level: 'upper', side: 'front', singleOuterBays: false },
+      { level: 'upper', side: 'left', singleOuterBays: false },
+    ] as const;
+
+    cases.forEach(({ level, side, singleOuterBays }) => {
+      const axis = collectCoordinates(level, side, 'column');
+      const actual = collectCoordinates(level, side, 'intercolumn');
+      const expected = expectedIntercolumn(axis, singleOuterBays);
+      expect(actual).toHaveLength(expected.length);
+      actual.forEach((coordinate, index) => {
+        expect(coordinate).toBeCloseTo(expected[index] ?? Number.NaN, 6);
+      });
+    });
   });
 });

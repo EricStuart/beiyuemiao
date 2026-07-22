@@ -16,6 +16,7 @@ export interface TimberFrameResult {
 }
 
 type EnclosureSide = 'front' | 'rear' | 'left' | 'right';
+type IntercolumnSetCount = 1 | 2;
 
 function beam(width: number, height: number, depth: number, material: Material): Mesh {
   return new Mesh(new BoxGeometry(width, height, depth), material);
@@ -88,6 +89,21 @@ function addBracketSet(
   set.userData.verticalScale = verticalScale;
   set.scale.set(roleScale, verticalScale, roleScale);
   group.add(set);
+}
+
+function createIntercolumnBracketCoordinates(
+  axis: readonly number[],
+  setsPerBay: (bayIndex: number, bayCount: number) => IntercolumnSetCount,
+): number[] {
+  const bayCount = axis.length - 1;
+  return axis.slice(0, -1).flatMap((start, bayIndex) => {
+    const end = axis[bayIndex + 1];
+    if (end === undefined) return [];
+    const span = end - start;
+    return setsPerBay(bayIndex, bayCount) === 1
+      ? [start + span / 2]
+      : [start + span / 3, start + (span * 2) / 3];
+  });
 }
 
 function createPerimeterFrame(
@@ -330,10 +346,8 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   }
   grid.add(lowerEnclosure);
 
-  const upperWidth = data.planWidth.value * 0.73;
-  const upperDepth = data.planDepth.value * 0.62;
-  const upperX = createAxisCoordinates(data.bayWidths.slice(1, -1), upperWidth);
-  const upperZ = createAxisCoordinates(data.depthWidths.slice(1, -1), upperDepth);
+  const upperX = xAxis.slice(1, -1);
+  const upperZ = zAxis.slice(1, -1);
   const upperFront = upperZ.at(-1) ?? 0;
   const upperRear = upperZ[0] ?? 0;
   const upperLeft = upperX[0] ?? 0;
@@ -365,25 +379,17 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     addBracketSet(brackets, x, upperBracketBaseY, upperFront, materials, 'upper', false, 'column', 'front');
     addBracketSet(brackets, x, upperBracketBaseY, upperRear, materials, 'upper', false, 'column', 'rear');
   }
-  for (let index = 0; index < upperX.length - 1; index += 1) {
-    const left = upperX[index];
-    const right = upperX[index + 1];
-    if (left === undefined || right === undefined) continue;
-    const midpoint = (left + right) / 2;
-    addBracketSet(brackets, midpoint, upperBracketBaseY, upperFront, materials, 'upper', false, 'intercolumn', 'front');
-    addBracketSet(brackets, midpoint, upperBracketBaseY, upperRear, materials, 'upper', false, 'intercolumn', 'rear');
+  for (const x of createIntercolumnBracketCoordinates(upperX, () => 2)) {
+    addBracketSet(brackets, x, upperBracketBaseY, upperFront, materials, 'upper', false, 'intercolumn', 'front');
+    addBracketSet(brackets, x, upperBracketBaseY, upperRear, materials, 'upper', false, 'intercolumn', 'rear');
   }
   for (const z of upperZ) {
     addBracketSet(brackets, upperLeft, upperBracketBaseY, z, materials, 'upper', true, 'column', 'left');
     addBracketSet(brackets, upperRight, upperBracketBaseY, z, materials, 'upper', true, 'column', 'right');
   }
-  for (let index = 0; index < upperZ.length - 1; index += 1) {
-    const rear = upperZ[index];
-    const front = upperZ[index + 1];
-    if (rear === undefined || front === undefined) continue;
-    const midpoint = (rear + front) / 2;
-    addBracketSet(brackets, upperLeft, upperBracketBaseY, midpoint, materials, 'upper', true, 'intercolumn', 'left');
-    addBracketSet(brackets, upperRight, upperBracketBaseY, midpoint, materials, 'upper', true, 'intercolumn', 'right');
+  for (const z of createIntercolumnBracketCoordinates(upperZ, () => 2)) {
+    addBracketSet(brackets, upperLeft, upperBracketBaseY, z, materials, 'upper', true, 'intercolumn', 'left');
+    addBracketSet(brackets, upperRight, upperBracketBaseY, z, materials, 'upper', true, 'intercolumn', 'right');
   }
 
   const plaque = createPlaque(materials);
@@ -408,13 +414,12 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     addBracketSet(brackets, x, lowerBracketBaseY, frontZ, materials, 'lower', false, 'column', 'front');
     addBracketSet(brackets, x, lowerBracketBaseY, rearZ, materials, 'lower', false, 'column', 'rear');
   }
-  for (let index = 0; index < xAxis.length - 1; index += 1) {
-    const left = xAxis[index];
-    const right = xAxis[index + 1];
-    if (left === undefined || right === undefined) continue;
-    const midpoint = (left + right) / 2;
-    addBracketSet(brackets, midpoint, lowerBracketBaseY, frontZ, materials, 'lower', false, 'intercolumn', 'front');
-    addBracketSet(brackets, midpoint, lowerBracketBaseY, rearZ, materials, 'lower', false, 'intercolumn', 'rear');
+  const outerBaySingle = (bayIndex: number, bayCount: number): IntercolumnSetCount => (
+    bayIndex === 0 || bayIndex === bayCount - 1 ? 1 : 2
+  );
+  for (const x of createIntercolumnBracketCoordinates(xAxis, outerBaySingle)) {
+    addBracketSet(brackets, x, lowerBracketBaseY, frontZ, materials, 'lower', false, 'intercolumn', 'front');
+    addBracketSet(brackets, x, lowerBracketBaseY, rearZ, materials, 'lower', false, 'intercolumn', 'rear');
   }
   const lowerLeft = xAxis[0] ?? 0;
   const lowerRight = xAxis.at(-1) ?? 0;
@@ -422,13 +427,9 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     addBracketSet(brackets, lowerLeft, lowerBracketBaseY, z, materials, 'lower', true, 'column', 'left');
     addBracketSet(brackets, lowerRight, lowerBracketBaseY, z, materials, 'lower', true, 'column', 'right');
   }
-  for (let index = 0; index < zAxis.length - 1; index += 1) {
-    const rear = zAxis[index];
-    const front = zAxis[index + 1];
-    if (rear === undefined || front === undefined) continue;
-    const midpoint = (rear + front) / 2;
-    addBracketSet(brackets, lowerLeft, lowerBracketBaseY, midpoint, materials, 'lower', true, 'intercolumn', 'left');
-    addBracketSet(brackets, lowerRight, lowerBracketBaseY, midpoint, materials, 'lower', true, 'intercolumn', 'right');
+  for (const z of createIntercolumnBracketCoordinates(zAxis, outerBaySingle)) {
+    addBracketSet(brackets, lowerLeft, lowerBracketBaseY, z, materials, 'lower', true, 'intercolumn', 'left');
+    addBracketSet(brackets, lowerRight, lowerBracketBaseY, z, materials, 'lower', true, 'intercolumn', 'right');
   }
   const interiorFloor = beam(data.planWidth.value - 8, 0.12, data.planDepth.value - 8, materials.darkTimber);
   interiorFloor.position.y = platformTop + 0.06;
