@@ -212,7 +212,7 @@ function createInstancedTiles(
   const geometry = new CylinderGeometry(0.14, 0.16, 1, 6, 1, true, 0, Math.PI);
   const mesh = new InstancedMesh(geometry, material, placements.length);
   const up = new Vector3(0, 1, 0);
-  const tileRollRadians = Math.PI / 2;
+  const tileRollRadians = -Math.PI / 2;
   const localRoll = new Quaternion().setFromAxisAngle(up, tileRollRadians);
   const quaternion = new Quaternion();
   const matrix = new Matrix4();

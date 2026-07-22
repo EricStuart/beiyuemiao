@@ -29,7 +29,7 @@ describe('hip ridge alignment', () => {
       expect(covering!.userData.kind).toBe('roof-tile-covering');
       expect(covering!.userData.instanceCount).toBeGreaterThan(400);
       expect(covering!.userData.surfaceOffset).toBeGreaterThanOrEqual(0.07);
-      expect(covering!.userData.tileRollRadians).toBeCloseTo(Math.PI / 2, 5);
+      expect(covering!.userData.tileRollRadians).toBeCloseTo(-Math.PI / 2, 5);
     });
   });
 
