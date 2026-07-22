@@ -18,6 +18,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createDeningHall } from '../model/create-dening-hall';
 import type { InspectionLayer, QualityLevel } from '../model/types';
+import { ORBIT_CONTROL_LIMITS } from './orbit-config';
 import { createViewPresets, type ViewPreset } from './view-presets';
 
 export type LightingMode = 'sunny' | 'survey';
@@ -83,7 +84,8 @@ export class DeningHallViewer {
     this.controls.dampingFactor = 0.065;
     this.controls.minDistance = 18;
     this.controls.maxDistance = 155;
-    this.controls.maxPolarAngle = Math.PI * 0.49;
+    this.controls.minPolarAngle = ORBIT_CONTROL_LIMITS.minPolarAngle;
+    this.controls.maxPolarAngle = ORBIT_CONTROL_LIMITS.maxPolarAngle;
     this.controls.target.set(0, 10, 0);
 
     this.building = createDeningHall(quality);
