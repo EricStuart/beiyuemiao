@@ -39,10 +39,8 @@ export function createBuildingMaterials(data: BuildingData): BuildingMaterials {
   const paintedBlue = weathered(0x315d62, 0.8);
   const tile = weathered(0xa89163, 0.93);
   tile.side = DoubleSide;
-  tile.vertexColors = true;
   const tileRib = weathered(0x8d7955, 0.92);
-  const diamondTile = weathered(0x55745a, 0.9);
-  diamondTile.vertexColors = true;
+  const diamondTile = weathered(0x2f543d, 0.9);
   const stone = weathered(data.palette.stone, 0.96);
   const brick = weathered(data.palette.brick, 0.98);
   const paving = weathered(0x77756c, 0.96);

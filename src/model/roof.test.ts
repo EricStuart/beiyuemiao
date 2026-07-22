@@ -15,8 +15,10 @@ describe('hip ridge alignment', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     expect(materials.tile.color.getHex()).toBe(0xa89163);
     expect(materials.tileRib.color.getHex()).toBe(0x8d7955);
-    expect(materials.diamondTile.color.getHex()).toBe(0x55745a);
+    expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
     expect(materials.tile.roughness).toBeGreaterThan(0.85);
+    expect(materials.tile.vertexColors).toBe(false);
+    expect(materials.diamondTile.vertexColors).toBe(false);
   });
 
   it('covers both roof levels with instanced faded tiles', () => {
@@ -38,6 +40,11 @@ describe('hip ridge alignment', () => {
     expect(diamond!.userData.kind).toBe('green-diamond-tiles');
     expect(diamond!.userData.face).toBe('front');
     expect(diamond!.userData.instanceCount).toBeGreaterThan(20);
+    expect(diamond!.userData.maskRatioHalf).toBe(0.21);
+    const diamondPatch = upper.getObjectByName('二层中央菱形绿瓦底');
+    expect(diamondPatch).toBeDefined();
+    expect(diamondPatch!.userData.kind).toBe('green-diamond-tile-bed');
+    expect(diamondPatch!.userData.ratioHalf).toBe(0.18);
   });
 
   it('keeps every diagonal ridge sample seated on the roof tiles', () => {

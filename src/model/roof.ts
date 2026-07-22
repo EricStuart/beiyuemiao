@@ -141,13 +141,35 @@ function createRoofSurface(dimensions: RoofDimensions, material: Material, segme
   return mesh;
 }
 
+type RoofSide = 'front' | 'back' | 'left' | 'right';
+
 interface TilePlacement {
   position: Vector3;
   tangent: Vector3;
-  side: 'front' | 'back' | 'left' | 'right';
+  side: RoofSide;
   ratio: number;
   t: number;
   length: number;
+}
+
+function roofPointAt(
+  dimensions: RoofDimensions,
+  side: RoofSide,
+  ratio: number,
+  t: number,
+  surfaceOffset: number,
+): Vector3 {
+  const halfWidth = dimensions.width / 2;
+  const halfDepth = dimensions.depth / 2;
+  const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
+  const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
+  const extentX = halfWidth + (topHalfWidth - halfWidth) * t;
+  const extentZ = halfDepth + (topHalfDepth - halfDepth) * t;
+  const y = profileY(t, dimensions) + evaluateWingLift(ratio, t) + surfaceOffset;
+  if (side === 'front') return new Vector3(ratio * extentX, y, extentZ);
+  if (side === 'back') return new Vector3(ratio * extentX, y, -extentZ);
+  if (side === 'right') return new Vector3(extentX, y, ratio * extentZ);
+  return new Vector3(-extentX, y, ratio * extentZ);
 }
 
 function collectTilePlacements(
@@ -156,25 +178,7 @@ function collectTilePlacements(
 ): TilePlacement[] {
   const columns = quality === 'high' ? 38 : quality === 'medium' ? 28 : 18;
   const rows = quality === 'high' ? 14 : quality === 'medium' ? 11 : 8;
-  const halfWidth = dimensions.width / 2;
-  const halfDepth = dimensions.depth / 2;
-  const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
-  const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
   const placements: TilePlacement[] = [];
-
-  const pointAt = (
-    side: TilePlacement['side'],
-    ratio: number,
-    t: number,
-  ): Vector3 => {
-    const extentX = halfWidth + (topHalfWidth - halfWidth) * t;
-    const extentZ = halfDepth + (topHalfDepth - halfDepth) * t;
-    const y = profileY(t, dimensions) + evaluateWingLift(ratio, t) + 0.08;
-    if (side === 'front') return new Vector3(ratio * extentX, y, extentZ);
-    if (side === 'back') return new Vector3(ratio * extentX, y, -extentZ);
-    if (side === 'right') return new Vector3(extentX, y, ratio * extentZ);
-    return new Vector3(-extentX, y, ratio * extentZ);
-  };
 
   for (const side of ['front', 'back', 'left', 'right'] as const) {
     for (let row = 0; row < rows; row += 1) {
@@ -183,8 +187,8 @@ function collectTilePlacements(
       const t = (t1 + t2) / 2;
       for (let column = 0; column <= columns; column += 1) {
         const ratio = -0.96 + (1.92 * column) / columns;
-        const start = pointAt(side, ratio, t1);
-        const end = pointAt(side, ratio, t2);
+        const start = roofPointAt(dimensions, side, ratio, t1, 0.08);
+        const end = roofPointAt(dimensions, side, ratio, t2, 0.08);
         placements.push({
           position: start.clone().lerp(end, 0.5),
           tangent: end.clone().sub(start).normalize(),
@@ -233,9 +237,33 @@ function createInstancedTiles(
 
 function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
   if (side !== 'front') return false;
-  const centredT = Math.abs(t - 0.46) / 0.22;
-  const centredX = Math.abs(ratio) / 0.18;
+  const centredT = Math.abs(t - 0.46) / 0.26;
+  const centredX = Math.abs(ratio) / 0.21;
   return centredT + centredX <= 1;
+}
+
+function createGreenDiamondPatch(
+  dimensions: RoofDimensions,
+  material: MeshStandardMaterial,
+): Mesh {
+  const vertices = [
+    roofPointAt(dimensions, 'front', 0, 0.68, 0.045),
+    roofPointAt(dimensions, 'front', -0.18, 0.46, 0.045),
+    roofPointAt(dimensions, 'front', 0, 0.24, 0.045),
+    roofPointAt(dimensions, 'front', 0.18, 0.46, 0.045),
+  ];
+  const geometry = new BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new Float32BufferAttribute(vertices.flatMap(({ x, y, z }) => [x, y, z]), 3),
+  );
+  geometry.setIndex([0, 1, 2, 0, 2, 3]);
+  geometry.computeVertexNormals();
+  const patch = new Mesh(geometry, material);
+  patch.name = '二层中央菱形绿瓦底';
+  patch.userData.kind = 'green-diamond-tile-bed';
+  patch.userData.ratioHalf = 0.18;
+  return patch;
 }
 
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
@@ -536,6 +564,7 @@ function createRoofLevel(
   const yellowPlacements = greenDiamond ? placements.filter((placement) => !isGreenDiamond(placement)) : placements;
   group.add(createInstancedTiles(yellowPlacements, materials.tile, '坡面筒瓦覆盖', 'roof-tile-covering'));
   if (greenDiamond) {
+    group.add(createGreenDiamondPatch(dimensions, materials.diamondTile));
     const greenPlacements = placements.filter(isGreenDiamond);
     const diamond = createInstancedTiles(
       greenPlacements,
@@ -544,6 +573,7 @@ function createRoofLevel(
       'green-diamond-tiles',
     );
     diamond.userData.face = 'front';
+    diamond.userData.maskRatioHalf = 0.21;
     group.add(diamond);
   }
   group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
