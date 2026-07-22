@@ -574,6 +574,8 @@ git commit -m "完善：增加二层中央菱形绿瓦"
 
 ### Task 6: Full verification, browser playtest, merge, and push
 
+Before full verification, include the user-added foundation refinement in the implementation branch: add 30 white stone bases beneath the outer perimeter columns, add `platform-paving` and `terrace-paving` grey-brick meshes at `0x77756c`, and cover them with focused tests in `src/model/timber-frame.test.ts` and `src/model/foundations.test.ts`.
+
 **Files:**
 - Verify all modified files
 - Browser artifacts: `artifacts/screenshots/door-roof-front.png`, `door-roof-rear.png`, `door-roof-bird.png`, `door-roof-mobile.png`
