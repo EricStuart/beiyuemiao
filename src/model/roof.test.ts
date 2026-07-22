@@ -1,4 +1,4 @@
-import { CylinderGeometry, Mesh } from 'three';
+import { Box3, CylinderGeometry, Mesh, Object3D } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
@@ -44,6 +44,41 @@ describe('hip ridge alignment', () => {
         (child) => child instanceof Mesh && child.geometry instanceof CylinderGeometry,
       );
       expect(directCylinders).toHaveLength(1);
+    });
+  });
+
+  it('seats two mirrored chiwen ornaments on the upper main ridge', () => {
+    const roofs = createRoofs(
+      DENING_HALL,
+      createBuildingMaterials(DENING_HALL),
+      'high',
+    );
+    const lowerRoof = roofs.children[0]!;
+    const upperRoof = roofs.children[1]!;
+    const findChiwen = (root: Object3D): Object3D[] => {
+      const matches: Object3D[] = [];
+      root.traverse((child) => {
+        if (child.userData.kind === 'chiwen') matches.push(child);
+      });
+      return matches;
+    };
+    const lowerChiwen = findChiwen(lowerRoof);
+    const upperChiwen = findChiwen(upperRoof);
+    const mainRidge = upperRoof.children.find(
+      (child) => child instanceof Mesh && child.geometry instanceof CylinderGeometry,
+    );
+
+    expect(lowerChiwen).toHaveLength(0);
+    expect(upperChiwen).toHaveLength(2);
+    expect(mainRidge).toBeDefined();
+    const [left, right] = upperChiwen.sort((a, b) => a.position.x - b.position.x);
+    expect(left!.position.x).toBeCloseTo(-right!.position.x, 5);
+    const ridgeBounds = new Box3().setFromObject(mainRidge!);
+    upperChiwen.forEach((chiwen) => {
+      const bounds = new Box3().setFromObject(chiwen);
+      expect(bounds.min.y).toBeLessThanOrEqual(ridgeBounds.max.y + 0.1);
+      expect(bounds.min.x).toBeLessThan(ridgeBounds.max.x);
+      expect(bounds.max.x).toBeGreaterThan(ridgeBounds.min.x);
     });
   });
 });

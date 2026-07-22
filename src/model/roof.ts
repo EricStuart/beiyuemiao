@@ -1,13 +1,16 @@
 import {
+  BoxGeometry,
   BufferGeometry,
   CatmullRomCurve3,
   ConeGeometry,
   CylinderGeometry,
+  ExtrudeGeometry,
   Float32BufferAttribute,
   Group,
   LineBasicMaterial,
   LineSegments,
   Mesh,
+  Shape,
   SphereGeometry,
   TubeGeometry,
   Vector3,
@@ -26,6 +29,7 @@ export interface RoofDimensions {
   ridgeY: number;
   eaveLift: number;
   name: string;
+  ridgeStyle?: 'simple' | 'chiwen';
 }
 
 function profileY(t: number, dimensions: RoofDimensions): number {
@@ -162,6 +166,54 @@ export function createHipRidgePoints(
   });
 }
 
+function createChiwen(side: number, materials: BuildingMaterials): Group {
+  const chiwen = new Group();
+  chiwen.name = side < 0 ? '西侧鸱吻' : '东侧鸱吻';
+  chiwen.userData.kind = 'chiwen';
+  chiwen.userData.level = 'upper';
+
+  const profile = new Shape();
+  profile.moveTo(-0.72, 0);
+  profile.lineTo(0.58, 0);
+  profile.bezierCurveTo(0.82, 0.3, 0.92, 0.72, 0.78, 1.12);
+  profile.bezierCurveTo(0.66, 1.48, 0.3, 1.7, 0.38, 2.08);
+  profile.bezierCurveTo(0.48, 2.48, 0.2, 2.78, -0.02, 3.05);
+  profile.bezierCurveTo(-0.1, 2.63, -0.38, 2.42, -0.55, 2.16);
+  profile.bezierCurveTo(-0.88, 1.68, -0.93, 1.15, -0.76, 0.72);
+  profile.lineTo(-0.95, 0.34);
+  profile.closePath();
+
+  const bodyGeometry = new ExtrudeGeometry(profile, {
+    depth: 0.5,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    bevelSize: 0.08,
+    bevelThickness: 0.08,
+    curveSegments: 8,
+  });
+  bodyGeometry.translate(0, 0, -0.25);
+  const body = new Mesh(bodyGeometry, materials.glazedGreen);
+  const base = new Mesh(new BoxGeometry(1.9, 0.34, 0.78), materials.glazedGreen);
+  base.position.y = 0.12;
+  const eye = new Mesh(new SphereGeometry(0.13, 10, 8), materials.gold);
+  eye.position.set(0.38, 2.1, 0.31);
+  const snout = new Mesh(new SphereGeometry(0.34, 12, 9), materials.glazedGreen);
+  snout.scale.set(1.55, 0.62, 0.82);
+  snout.position.set(-0.48, 2.42, 0);
+  const jaw = new Mesh(new BoxGeometry(0.82, 0.18, 0.48), materials.glazedGreen);
+  jaw.rotation.z = 0.18;
+  jaw.position.set(-0.58, 2.18, 0);
+  const crest = new Mesh(new ConeGeometry(0.16, 0.7, 8), materials.glazedGreen);
+  crest.rotation.z = -0.48;
+  crest.position.set(-0.15, 2.82, 0);
+  const backFin = new Mesh(new ConeGeometry(0.22, 0.86, 8), materials.glazedGreen);
+  backFin.rotation.z = 0.38;
+  backFin.position.set(0.48, 1.35, 0);
+  chiwen.add(base, body, eye, snout, jaw, crest, backFin);
+  chiwen.scale.set(side * 1.12, 1.08, 1.12);
+  return chiwen;
+}
+
 function addRidges(group: Group, dimensions: RoofDimensions, materials: BuildingMaterials): void {
   const ridgeY = dimensions.ridgeY + 0.25;
   const ridgeHalf = dimensions.ridgeLength / 2;
@@ -169,6 +221,27 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
   main.rotation.z = Math.PI / 2;
   main.position.set(0, ridgeY, 0);
   group.add(main);
+
+  if (dimensions.ridgeStyle === 'chiwen') {
+    const ridgeBand = new Mesh(
+      new BoxGeometry(dimensions.ridgeLength + 0.5, 0.58, 0.36),
+      materials.glazedGreen,
+    );
+    ridgeBand.name = '上层琉璃正脊带';
+    ridgeBand.userData.kind = 'ridge-band';
+    ridgeBand.position.set(0, dimensions.ridgeY + 0.32, 0);
+    group.add(ridgeBand);
+    const ornamentCount = 18;
+    for (let index = 0; index < ornamentCount; index += 1) {
+      const stud = new Mesh(new BoxGeometry(0.42, 0.22, 0.44), materials.gold);
+      stud.position.set(
+        -ridgeHalf + ((index + 0.5) / ornamentCount) * dimensions.ridgeLength,
+        dimensions.ridgeY + 0.62,
+        0,
+      );
+      group.add(stud);
+    }
+  }
 
   for (const xSide of [-1, 1]) {
     for (const zSide of [-1, 1]) {
@@ -182,15 +255,21 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
   }
 
   for (const side of [-1, 1]) {
-    const ornament = new Group();
-    const body = new Mesh(new SphereGeometry(0.58, 10, 8), materials.glazedGreen);
-    body.scale.set(0.72, 1.18, 0.55);
-    const horn = new Mesh(new ConeGeometry(0.24, 1.1, 8), materials.glazedGreen);
-    horn.rotation.z = -side * 0.75;
-    horn.position.set(side * 0.42, 0.58, 0);
-    ornament.add(body, horn);
-    ornament.position.set(side * (ridgeHalf + 0.35), ridgeY + 0.65, 0);
-    group.add(ornament);
+    if (dimensions.ridgeStyle === 'chiwen') {
+      const chiwen = createChiwen(side, materials);
+      chiwen.position.set(side * (ridgeHalf + 0.32), ridgeY + 0.22, 0);
+      group.add(chiwen);
+    } else {
+      const ornament = new Group();
+      const body = new Mesh(new SphereGeometry(0.58, 10, 8), materials.glazedGreen);
+      body.scale.set(0.72, 1.18, 0.55);
+      const horn = new Mesh(new ConeGeometry(0.24, 1.1, 8), materials.glazedGreen);
+      horn.rotation.z = -side * 0.75;
+      horn.position.set(side * 0.42, 0.58, 0);
+      ornament.add(body, horn);
+      ornament.position.set(side * (ridgeHalf + 0.35), ridgeY + 0.65, 0);
+      group.add(ornament);
+    }
   }
 }
 
@@ -232,6 +311,7 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
         baseY: 16.55,
         ridgeY: data.upperRidgeHeight,
         eaveLift: 0.72,
+        ridgeStyle: 'chiwen',
       },
       materials,
       quality,

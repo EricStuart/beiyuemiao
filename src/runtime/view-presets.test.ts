@@ -15,4 +15,10 @@ describe('view presets', () => {
     );
     expect(mobile.position.y).toBeGreaterThan(desktop.position.y * 1.15);
   });
+
+  it('keeps the raised platform in the desktop side frame', () => {
+    const side = createViewPresets(52.8, 38.06, 25.6, 16 / 9).left;
+    expect(side.position.distanceTo(side.target)).toBeGreaterThan(72);
+    expect(side.target.y).toBeLessThan(10);
+  });
 });

@@ -16,7 +16,7 @@ export function createViewPresets(
   const target = new Vector3(0, height * 0.39, 0);
   const framingScale = Math.max(1, 0.88 / Math.max(aspect, 0.35));
   const frontDistance = Math.max(width * 1.28, depth * 1.85) * framingScale;
-  const sideDistance = Math.max(depth * 1.48, width * 0.94) * framingScale;
+  const sideDistance = Math.max(depth * 1.96, width * 1.15) * framingScale;
   const eyeHeight = height * (0.52 + 0.17 * (framingScale - 1));
   return {
     front: { position: new Vector3(0, eyeHeight, frontDistance), target: target.clone() },
