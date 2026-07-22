@@ -11,6 +11,14 @@ import {
 import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 
 describe('hip ridge alignment', () => {
+  it('uses faded yellow tiles and aged green diamond tiles', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    expect(materials.tile.color.getHex()).toBe(0xa89163);
+    expect(materials.tileRib.color.getHex()).toBe(0x8d7955);
+    expect(materials.diamondTile.color.getHex()).toBe(0x55745a);
+    expect(materials.tile.roughness).toBeGreaterThan(0.85);
+  });
+
   it('keeps every diagonal ridge sample seated on the roof tiles', () => {
     const dimensions: RoofDimensions = {
       width: 61.8,

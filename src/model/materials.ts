@@ -14,6 +14,7 @@ export interface BuildingMaterials {
   paintedBlue: MeshStandardMaterial;
   tile: MeshStandardMaterial;
   tileRib: MeshStandardMaterial;
+  diamondTile: MeshStandardMaterial;
   glazedGreen: MeshPhysicalMaterial;
   stone: MeshStandardMaterial;
   brick: MeshStandardMaterial;
@@ -35,9 +36,12 @@ export function createBuildingMaterials(data: BuildingData): BuildingMaterials {
   const darkTimber = weathered(data.palette.darkTimber, 0.92);
   const paintedGreen = weathered(data.palette.paintedGreen, 0.78);
   const paintedBlue = weathered(0x315d62, 0.8);
-  const tile = weathered(data.palette.tileGrey, 0.94);
+  const tile = weathered(0xa89163, 0.93);
   tile.side = DoubleSide;
-  const tileRib = weathered(0x68716b, 0.9);
+  tile.vertexColors = true;
+  const tileRib = weathered(0x8d7955, 0.92);
+  const diamondTile = weathered(0x55745a, 0.9);
+  diamondTile.vertexColors = true;
   const stone = weathered(data.palette.stone, 0.96);
   const brick = weathered(data.palette.brick, 0.98);
   const door = weathered(0x4a211d, 0.88);
@@ -61,11 +65,12 @@ export function createBuildingMaterials(data: BuildingData): BuildingMaterials {
     paintedBlue,
     tile,
     tileRib,
+    diamondTile,
     glazedGreen,
     stone,
     brick,
     door,
     gold,
-    all: [timber, darkTimber, paintedGreen, paintedBlue, tile, tileRib, glazedGreen, stone, brick, door, gold],
+    all: [timber, darkTimber, paintedGreen, paintedBlue, tile, tileRib, diamondTile, glazedGreen, stone, brick, door, gold],
   };
 }
