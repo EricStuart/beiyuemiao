@@ -32,16 +32,16 @@ describe('Dening Hall assembly', () => {
     expect((upperRoof?.material as Material).side).toBe(DoubleSide);
   });
 
-  it('replaces the upper enclosure with three complete bracket tiers', () => {
+  it('replaces the upper enclosure with one complete four-stage bracket band', () => {
     const building = createDeningHall('medium');
     expect(building.layers.get('grid')?.getObjectByName('上层檐下围护')).toBeUndefined();
     const upperBrackets = building.layers.get('brackets')?.children.filter(
       (child) => child.userData.level === 'upper',
     );
-    expect(upperBrackets).toHaveLength(144);
-    expect(new Set(upperBrackets?.map((child) => child.userData.tier))).toEqual(
-      new Set(['lower', 'middle', 'upper']),
-    );
+    expect(upperBrackets).toHaveLength(48);
+    expect(upperBrackets?.every((child) => child.userData.stageCount === 4)).toBe(true);
+    expect(building.layers.get('grid')?.getObjectByName('二层斗栱转换梁架')).toBeDefined();
+    expect(building.layers.get('grid')?.getObjectByName('二层斗栱承檐梁架')).toBeDefined();
   });
 
   it('keeps the courtyard ground as a shadow receiver only', () => {
