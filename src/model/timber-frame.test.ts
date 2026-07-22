@@ -68,6 +68,20 @@ describe('lower timber frame', () => {
     expect(plaque.position.y).toBeLessThan(DENING_HALL.upperEaveHeight);
   });
 
+  it('keeps the plaque frame and backing without any lettering', () => {
+    const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const plaque = grid.children.find((child) => child.userData.kind === 'plaque');
+    const letteringNames: string[] = [];
+
+    expect(plaque).toBeDefined();
+    plaque!.traverse((child) => {
+      if (child.name.includes('字') || child.name.includes('文字')) {
+        letteringNames.push(child.name);
+      }
+    });
+    expect(letteringNames).toHaveLength(0);
+  });
+
   it('builds a continuous multi-layer upper bracket band below the upper eave', () => {
     const { brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const upperBrackets = brackets.children.filter(
@@ -97,6 +111,37 @@ describe('lower timber frame', () => {
     expect(sidePanels.filter((panel) => panel.userData.side === 'right')).toHaveLength(4);
     sidePanels.forEach((panel) => {
       expect(new Box3().setFromObject(panel).min.y).toBeCloseTo(12.25, 5);
+    });
+  });
+
+  it('uses no visible upper columns and wraps the upper storey in bracket sets', () => {
+    const { grid, brackets } = createTimberFrame(
+      DENING_HALL,
+      createBuildingMaterials(DENING_HALL),
+    );
+    const upperColumns = grid.children.filter(
+      (child) => child instanceof Mesh
+        && child.userData.level === 'upper'
+        && child.userData.kind === 'column',
+    );
+    const upperBrackets = brackets.children.filter(
+      (child) => child.userData.level === 'upper' && child.userData.kind === 'bracket',
+    );
+    const sideCounts = { front: 0, rear: 0, left: 0, right: 0 };
+    upperBrackets.forEach((set) => {
+      const side = set.userData.side as keyof typeof sideCounts;
+      if (side in sideCounts) sideCounts[side] += 1;
+    });
+
+    expect(upperColumns).toHaveLength(0);
+    expect(sideCounts).toEqual({ front: 15, rear: 15, left: 9, right: 9 });
+    (Object.keys(sideCounts) as Array<keyof typeof sideCounts>).forEach((side) => {
+      expect(upperBrackets.some(
+        (set) => set.userData.side === side && set.userData.role === 'column',
+      )).toBe(true);
+      expect(upperBrackets.some(
+        (set) => set.userData.side === side && set.userData.role === 'intercolumn',
+      )).toBe(true);
     });
   });
 });

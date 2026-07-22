@@ -49,4 +49,54 @@ describe('platform layer geometry', () => {
     expect(terraceBounds.max.x).toBeLessThan(mainBounds.max.x);
     expect(terraceBounds.max.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
   });
+
+  it('builds a large terrace with front, left, and right stair flights', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const ground = group.children.find((child) => child.userData.kind === 'courtyard-ground');
+    const terrace = group.children.find((child) => child.userData.kind === 'platform-terrace');
+    const steps = group.children.filter((child) => child.userData.kind === 'platform-step');
+
+    expect(ground).toBeDefined();
+    expect(terrace).toBeDefined();
+    const groundY = new Box3().setFromObject(ground!).max.y;
+    const terraceBounds = new Box3().setFromObject(terrace!);
+    expect(terraceBounds.max.x - terraceBounds.min.x).toBeGreaterThanOrEqual(25);
+    expect(terraceBounds.max.z - terraceBounds.min.z).toBeGreaterThanOrEqual(9.5);
+
+    (['front', 'left', 'right'] as const).forEach((side) => {
+      const flight = steps.filter((step) => step.userData.side === side);
+      expect(flight).toHaveLength(10);
+      const lowest = flight.find((step) => step.userData.index === 0);
+      const highest = flight.find((step) => step.userData.index === 9);
+      expect(lowest).toBeDefined();
+      expect(highest).toBeDefined();
+      expect(new Box3().setFromObject(lowest!).min.y).toBeCloseTo(groundY, 5);
+      expect(new Box3().setFromObject(highest!).max.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
+    });
+  });
+
+  it('wraps the main platform and terrace with complete white balustrades', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const platformRails = group.children.filter(
+      (child) => child.userData.kind === 'platform-balustrade',
+    );
+    const stairRails = group.children.filter(
+      (child) => child.userData.kind === 'stair-balustrade',
+    );
+
+    expect(new Set(platformRails.map((rail) => rail.userData.side))).toEqual(new Set([
+      'front',
+      'rear',
+      'left',
+      'right',
+      'terrace-front',
+      'terrace-left',
+      'terrace-right',
+    ]));
+    (['front', 'left', 'right'] as const).forEach((side) => {
+      expect(stairRails.filter((rail) => rail.userData.stairSide === side)).toHaveLength(2);
+    });
+  });
 });

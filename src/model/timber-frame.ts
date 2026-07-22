@@ -1,11 +1,8 @@
 import {
   BoxGeometry,
-  CanvasTexture,
   CylinderGeometry,
   Group,
   Mesh,
-  MeshBasicMaterial,
-  PlaneGeometry,
   type Material,
 } from 'three';
 import type { BuildingData } from '../data/building';
@@ -50,6 +47,7 @@ function addBracketSet(
   level: 'lower' | 'upper',
   inward = false,
   role: 'column' | 'intercolumn' = 'column',
+  side?: EnclosureSide,
 ): void {
   const set = new Group();
   set.position.set(x, y, z);
@@ -57,12 +55,13 @@ function addBracketSet(
   set.userData.level = level;
   set.userData.kind = 'bracket';
   set.userData.role = role;
+  set.userData.side = side;
+  if (inward) set.rotation.y = Math.PI / 2;
   const bearing = beam(1.55, 0.24, 0.62, materials.paintedGreen);
   const block = beam(0.72, 0.42, 0.72, materials.paintedBlue);
   block.position.y = 0.31;
   const arm = beam(0.42, 0.3, 1.82, materials.timber);
   arm.position.y = 0.58;
-  if (inward) arm.rotation.y = Math.PI / 2;
   const cap = beam(2.15, 0.24, 0.48, materials.paintedGreen);
   cap.position.y = 0.78;
   set.add(bearing, block, arm, cap);
@@ -185,44 +184,6 @@ function createPlaque(materials: BuildingMaterials): Group {
     plaque.add(pendant, wing);
   }
 
-  if (typeof document !== 'undefined' && import.meta.env.MODE !== 'test') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 640;
-    const context = canvas.getContext('2d');
-    if (context) {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = '#b6923f';
-      context.strokeStyle = '#5b3c16';
-      context.lineWidth = 8;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.font = 'bold 190px "STKaiti", "KaiTi", serif';
-      const glyphs = [
-        ['德', 720, 190],
-        ['宁', 720, 455],
-        ['之', 310, 190],
-        ['殿', 310, 455],
-      ] as const;
-      glyphs.forEach(([glyph, x, y]) => {
-        context.strokeText(glyph, x, y);
-        context.fillText(glyph, x, y);
-      });
-      const lettering = new Mesh(
-        new PlaneGeometry(4.85, 2.35),
-        new MeshBasicMaterial({ map: new CanvasTexture(canvas), transparent: true }),
-      );
-      lettering.name = '德宁之殿金字';
-      lettering.position.z = 0.151;
-      plaque.add(lettering);
-    }
-  } else {
-    const letteringFallback = beam(4.2, 1.85, 0.05, materials.gold);
-    letteringFallback.name = '牌匾文字测试替身';
-    letteringFallback.position.z = 0.17;
-    plaque.add(letteringFallback);
-  }
-
   return plaque;
 }
 
@@ -286,7 +247,6 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   const upperTop = data.upperEaveHeight - 1.8;
   const upperX = createAxisCoordinates(data.bayWidths.slice(1, -1), upperWidth);
   const upperZ = createAxisCoordinates(data.depthWidths.slice(1, -1), upperDepth);
-  addPerimeterColumns(grid, upperX, upperZ, upperBottom, upperTop, 0.43, materials.timber, 'upper');
   const upperFront = upperZ.at(-1) ?? 0;
   const upperBeam = beam(upperWidth + 1, 0.5, 0.58, materials.paintedGreen);
   upperBeam.position.set(0, upperTop + 0.18, upperFront);
@@ -351,16 +311,28 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     addBracketSet(brackets, x, outerTop + 0.65, rearZ, materials, 'lower');
   }
   for (const x of upperX) {
-    addBracketSet(brackets, x, upperTop + 0.12, upperFront, materials, 'upper');
-    addBracketSet(brackets, x, upperTop + 0.12, upperRear, materials, 'upper');
+    addBracketSet(brackets, x, upperTop + 0.12, upperFront, materials, 'upper', false, 'column', 'front');
+    addBracketSet(brackets, x, upperTop + 0.12, upperRear, materials, 'upper', false, 'column', 'rear');
   }
   for (let index = 0; index < upperX.length - 1; index += 1) {
     const left = upperX[index];
     const right = upperX[index + 1];
     if (left === undefined || right === undefined) continue;
     const midpoint = (left + right) / 2;
-    addBracketSet(brackets, midpoint, upperTop + 0.12, upperFront, materials, 'upper', false, 'intercolumn');
-    addBracketSet(brackets, midpoint, upperTop + 0.12, upperRear, materials, 'upper', false, 'intercolumn');
+    addBracketSet(brackets, midpoint, upperTop + 0.12, upperFront, materials, 'upper', false, 'intercolumn', 'front');
+    addBracketSet(brackets, midpoint, upperTop + 0.12, upperRear, materials, 'upper', false, 'intercolumn', 'rear');
+  }
+  for (const z of upperZ) {
+    addBracketSet(brackets, upperLeft, upperTop + 0.12, z, materials, 'upper', true, 'column', 'left');
+    addBracketSet(brackets, upperRight, upperTop + 0.12, z, materials, 'upper', true, 'column', 'right');
+  }
+  for (let index = 0; index < upperZ.length - 1; index += 1) {
+    const rear = upperZ[index];
+    const front = upperZ[index + 1];
+    if (rear === undefined || front === undefined) continue;
+    const midpoint = (rear + front) / 2;
+    addBracketSet(brackets, upperLeft, upperTop + 0.12, midpoint, materials, 'upper', true, 'intercolumn', 'left');
+    addBracketSet(brackets, upperRight, upperTop + 0.12, midpoint, materials, 'upper', true, 'intercolumn', 'right');
   }
 
   const interiorFloor = beam(data.planWidth.value - 8, 0.12, data.planDepth.value - 8, materials.darkTimber);
