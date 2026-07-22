@@ -2,7 +2,7 @@ import { Box3, Mesh, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
-import { UPPER_ROOF_BASE_Y } from './roof';
+import { getUpperRoofSurfaceYAtFrontZ, UPPER_ROOF_BASE_Y } from './roof';
 import { createTimberFrame } from './timber-frame';
 
 describe('lower timber frame', () => {
@@ -97,7 +97,7 @@ describe('lower timber frame', () => {
     expect(letteringNames).toHaveLength(0);
   });
 
-  it('uses a near-square plaque with heavier top and bottom frames', () => {
+  it('uses a roof-clear horizontal plaque with heavier top and bottom frames', () => {
     const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const plaque = grid.children.find((child) => child.userData.kind === 'plaque')!;
     const board = plaque.getObjectByName('牌匾绿色底板')!;
@@ -105,14 +105,14 @@ describe('lower timber frame', () => {
     const horizontalFrame = plaque.getObjectByName('牌匾上下边框');
     const verticalFrame = plaque.getObjectByName('牌匾左右边框');
 
-    expect(size.y / size.x).toBeGreaterThan(0.85);
-    expect(size.y / size.x).toBeLessThan(1.15);
+    expect(size.y / size.x).toBeGreaterThan(0.4);
+    expect(size.y / size.x).toBeLessThan(0.6);
     expect(horizontalFrame?.userData.thickness).toBeGreaterThan(
       verticalFrame?.userData.thickness,
     );
   });
 
-  it('seats the plaque between the upper bracket top and transfer beam without roof penetration', () => {
+  it('matches the central two-bracket span, clears the upper eave, and sits on the transfer beam', () => {
     const { grid, brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const plaque = grid.children.find((child) => child.userData.kind === 'plaque')!;
     const board = plaque.getObjectByName('牌匾绿色底板')!;
@@ -121,19 +121,27 @@ describe('lower timber frame', () => {
     const upperBrackets = brackets.children.filter(
       (child) => child.userData.level === 'upper' && child.userData.side === 'front',
     );
-    const upperMaxY = Math.max(...upperBrackets.map((bracket) => new Box3().setFromObject(bracket).max.y));
     const transferFrame = grid.getObjectByName('二层斗栱转换梁架')!;
     const transferTop = new Box3().setFromObject(transferFrame).max.y;
-    const frontMaxZ = Math.max(...upperBrackets.map((bracket) => new Box3().setFromObject(bracket).max.z));
     const plaqueSize = plaqueBounds.getSize(new Vector3());
+    const centralTwoBrackets = [...upperBrackets]
+      .sort((left, right) => Math.abs(left.position.x) - Math.abs(right.position.x))
+      .slice(0, 2);
+    const centralPairBounds = new Box3();
+    centralTwoBrackets.forEach((bracket) => centralPairBounds.expandByObject(bracket));
+    const centralPairWidth = centralPairBounds.getSize(new Vector3()).x;
 
-    expect(boardSize.x).toBeLessThan(1.5);
-    expect(boardSize.y).toBeLessThan(1.5);
-    expect(plaqueSize.y / plaqueSize.x).toBeGreaterThan(0.85);
-    expect(plaqueSize.y / plaqueSize.x).toBeLessThan(1.15);
-    expect(plaqueBounds.max.y).toBeCloseTo(upperMaxY, 2);
+    expect(boardSize.x).toBeGreaterThan(2.5);
+    expect(boardSize.y).toBeGreaterThan(1);
+    expect(plaqueSize.y / plaqueSize.x).toBeGreaterThan(0.4);
+    expect(plaqueSize.y / plaqueSize.x).toBeLessThan(0.6);
+    expect(plaqueSize.x / centralPairWidth).toBeGreaterThanOrEqual(0.85);
+    expect(plaqueSize.x / centralPairWidth).toBeLessThanOrEqual(0.95);
     expect(plaqueBounds.min.y).toBeCloseTo(transferTop, 2);
-    expect(plaqueBounds.min.z).toBeGreaterThan(frontMaxZ);
+    expect(plaqueBounds.min.z).toBeGreaterThan(10.5);
+    expect(plaqueBounds.max.y).toBeLessThan(
+      getUpperRoofSurfaceYAtFrontZ(DENING_HALL, plaqueBounds.min.z) - 0.05,
+    );
   });
 
   it('tilts the plaque outward from the upper bracket band', () => {
@@ -260,7 +268,7 @@ describe('lower timber frame', () => {
     expect(upper.scale.y).toBeCloseTo(1, 5);
   });
 
-  it('lowers the upper roof one metre while keeping the bracket and plaque contact lines explicit', () => {
+  it('lowers the upper roof one metre while keeping the plaque hanger attached to its top', () => {
     const { grid, brackets } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const upper = brackets.children.filter(
       (child) => child.userData.level === 'upper' && child.userData.kind === 'bracket',
@@ -276,8 +284,9 @@ describe('lower timber frame', () => {
     expect(UPPER_ROOF_BASE_Y).toBeCloseTo(13.5, 5);
     expect(upperMaxY - UPPER_ROOF_BASE_Y).toBeCloseTo(1, 2);
     expect(frameBounds.max.y).toBeLessThanOrEqual(UPPER_ROOF_BASE_Y + 0.2);
-    expect(plaqueBounds.max.y).toBeCloseTo(upperMaxY, 2);
-    expect(hangerTop).toBeLessThanOrEqual(upperMaxY + 0.05);
+    expect(plaqueBounds.min.y).toBeLessThan(upperMaxY);
+    expect(hangerTop).toBeLessThanOrEqual(plaqueBounds.max.y + 0.05);
+    expect(hangerTop).toBeGreaterThanOrEqual(plaqueBounds.max.y - 0.35);
   });
 
   it('removes every upper enclosure wall and mullion', () => {

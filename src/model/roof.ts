@@ -37,6 +37,23 @@ export interface RoofDimensions {
 export const UPPER_ROOF_DROP = 2.5;
 export const UPPER_ROOF_BASE_Y = 16.0 - UPPER_ROOF_DROP;
 
+export function getUpperRoofFrontEaveZ(data: BuildingData): number {
+  return (data.planDepth.value * 0.68 + 7) / 2;
+}
+
+export function getUpperRoofSurfaceYAtFrontZ(data: BuildingData, z: number): number {
+  const run = getUpperRoofFrontEaveZ(data);
+  const t = Math.min(1, Math.max(0, (run - Math.abs(z)) / run));
+  return UPPER_ROOF_BASE_Y + evaluateRaisedEaveHeight(
+    {
+      run,
+      rise: data.upperRidgeHeight - UPPER_ROOF_DROP,
+      eaveLift: 0.72,
+    },
+    t,
+  );
+}
+
 function profileY(t: number, dimensions: RoofDimensions): number {
   return dimensions.baseY + evaluateRaisedEaveHeight(
     {
@@ -419,21 +436,21 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
       quality,
     ),
   );
-  roofs.add(
-    createRoofLevel(
-      {
+  const upperRoof = createRoofLevel(
+    {
         name: '上檐庑殿顶',
         width: data.planWidth.value * 0.82 + 6.5,
-        depth: data.planDepth.value * 0.68 + 7,
+        depth: getUpperRoofFrontEaveZ(data) * 2,
         ridgeLength: data.planWidth.value * 0.48,
         baseY: UPPER_ROOF_BASE_Y,
         ridgeY: data.upperRidgeHeight - UPPER_ROOF_DROP,
         eaveLift: 0.72,
         ridgeStyle: 'chiwen',
       },
-      materials,
-      quality,
-    ),
+    materials,
+    quality,
   );
+  upperRoof.userData.frontEaveZ = getUpperRoofFrontEaveZ(data);
+  roofs.add(upperRoof);
   return roofs;
 }

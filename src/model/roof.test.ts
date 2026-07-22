@@ -75,6 +75,14 @@ describe('hip ridge alignment', () => {
     expect(upper.userData.ridgeY).toBeCloseTo(DENING_HALL.upperRidgeHeight - 2.5, 5);
   });
 
+  it('exposes the upper front eave boundary for mounted facade ornaments', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
+    const expectedFrontEaveZ = (DENING_HALL.planDepth.value * 0.68 + 7) / 2;
+
+    expect(upper.userData.frontEaveZ).toBeCloseTo(expectedFrontEaveZ, 5);
+  });
+
   it('adds four seated ornaments at the middle of the upper hip ridges', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
