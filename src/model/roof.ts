@@ -184,48 +184,153 @@ function createChiwen(side: number, materials: BuildingMaterials): Group {
   chiwen.name = side < 0 ? '西侧鸱吻' : '东侧鸱吻';
   chiwen.userData.kind = 'chiwen';
   chiwen.userData.level = 'upper';
+  chiwen.userData.profile = 'front-reference';
 
   const profile = new Shape();
-  profile.moveTo(-0.72, 0);
-  profile.lineTo(0.58, 0);
-  profile.bezierCurveTo(0.82, 0.3, 0.92, 0.72, 0.78, 1.12);
-  profile.bezierCurveTo(0.66, 1.48, 0.3, 1.7, 0.38, 2.08);
-  profile.bezierCurveTo(0.48, 2.48, 0.2, 2.78, -0.02, 3.05);
-  profile.bezierCurveTo(-0.1, 2.63, -0.38, 2.42, -0.55, 2.16);
-  profile.bezierCurveTo(-0.88, 1.68, -0.93, 1.15, -0.76, 0.72);
-  profile.lineTo(-0.95, 0.34);
+  profile.moveTo(-0.58, 0.22);
+  profile.lineTo(0.72, 0.22);
+  profile.bezierCurveTo(0.76, 0.78, 0.68, 1.55, 0.56, 2.2);
+  profile.bezierCurveTo(0.49, 2.68, 0.38, 2.98, 0.16, 3.1);
+  profile.bezierCurveTo(-0.02, 3.18, -0.14, 3.0, -0.18, 2.72);
+  profile.bezierCurveTo(-0.22, 2.25, -0.28, 1.75, -0.32, 1.28);
+  profile.bezierCurveTo(-0.36, 0.8, -0.48, 0.46, -0.58, 0.22);
   profile.closePath();
 
   const bodyGeometry = new ExtrudeGeometry(profile, {
-    depth: 0.5,
+    depth: 0.56,
     bevelEnabled: true,
     bevelSegments: 2,
     bevelSize: 0.08,
     bevelThickness: 0.08,
-    curveSegments: 8,
+    curveSegments: 10,
   });
-  bodyGeometry.translate(0, 0, -0.25);
+  bodyGeometry.translate(0, 0, -0.28);
   const body = new Mesh(bodyGeometry, materials.glazedGreen);
+  body.name = '鸱吻高背主体';
+  body.userData.kind = 'chiwen-body';
+
   const base = new Mesh(new BoxGeometry(2.0, 0.46, 0.82), materials.glazedGreen);
   base.name = '鸱吻底座';
   base.userData.kind = 'chiwen-base';
   base.position.y = 0.12;
-  const eye = new Mesh(new SphereGeometry(0.13, 10, 8), materials.gold);
-  eye.position.set(0.38, 2.1, 0.31);
-  const snout = new Mesh(new SphereGeometry(0.34, 12, 9), materials.glazedGreen);
-  snout.scale.set(1.55, 0.62, 0.82);
-  snout.position.set(-0.48, 2.42, 0);
-  const jaw = new Mesh(new BoxGeometry(0.82, 0.18, 0.48), materials.glazedGreen);
-  jaw.rotation.z = 0.18;
-  jaw.position.set(-0.58, 2.18, 0);
-  const crest = new Mesh(new ConeGeometry(0.16, 0.7, 8), materials.glazedGreen);
-  crest.rotation.z = -0.48;
-  crest.position.set(-0.15, 2.82, 0);
-  const backFin = new Mesh(new ConeGeometry(0.22, 0.86, 8), materials.glazedGreen);
-  backFin.rotation.z = 0.38;
-  backFin.position.set(0.48, 1.35, 0);
-  chiwen.add(base, body, eye, snout, jaw, crest, backFin);
-  chiwen.scale.set(side * 1.12, 1.08, 1.12);
+
+  const tailCurve = new CatmullRomCurve3([
+    new Vector3(0.05, 2.72, 0),
+    new Vector3(-0.25, 3.02, 0),
+    new Vector3(-0.62, 3.26, 0),
+    new Vector3(-1.02, 3.34, 0),
+    new Vector3(-1.16, 3.18, 0),
+    new Vector3(-1.04, 3.02, 0),
+  ]);
+  const tail = new Mesh(new TubeGeometry(tailCurve, 24, 0.19, 10, false), materials.glazedGreen);
+  tail.name = '鸱吻内卷尾';
+  tail.userData.kind = 'chiwen-tail';
+  const tailTip = new Mesh(new SphereGeometry(0.22, 12, 10), materials.glazedGreen);
+  tailTip.name = '鸱吻卷尾端';
+  tailTip.userData.kind = 'chiwen-tail-tip';
+  tailTip.scale.set(1.12, 1, 0.86);
+  tailTip.position.set(-1.05, 3.12, 0);
+
+  const backScalePositions = [
+    { x: 0.02, y: 2.88, scale: 1.02 },
+    { x: 0.2, y: 3.02, scale: 1.08 },
+    { x: 0.39, y: 3.0, scale: 1.06 },
+    { x: 0.57, y: 2.9, scale: 1 },
+    { x: 0.7, y: 2.72, scale: 0.94 },
+    { x: 0.75, y: 2.5, scale: 0.88 },
+    { x: 0.77, y: 2.26, scale: 0.82 },
+  ];
+  const backScales = backScalePositions.flatMap(({ x, y, scale }, index) => [-1, 1].map((zSide) => {
+    const plate = new Mesh(new SphereGeometry(0.24, 12, 9), materials.glazedGreen);
+    plate.name = `鸱吻背鳍${index + 1}${zSide > 0 ? '前' : '后'}`;
+    plate.userData.kind = 'chiwen-back-scale';
+    plate.scale.set(0.7 * scale, 1.08 * scale, 0.34 * scale);
+    plate.position.set(x, y, zSide * 0.3);
+    return plate;
+  }));
+
+  const head = new Mesh(new SphereGeometry(0.5, 14, 10), materials.glazedGreen);
+  head.name = '鸱吻龙首';
+  head.userData.kind = 'chiwen-head';
+  head.scale.set(1.28, 1.08, 0.94);
+  head.position.set(-0.58, 1.06, 0);
+  const snout = new Mesh(new SphereGeometry(0.36, 12, 9), materials.gold);
+  snout.name = '鸱吻金色吻部';
+  snout.userData.kind = 'chiwen-snout';
+  snout.scale.set(1.52, 0.7, 0.92);
+  snout.position.set(-0.98, 0.94, 0);
+
+  const upperJaw = new Mesh(new BoxGeometry(0.96, 0.2, 0.56), materials.gold);
+  upperJaw.name = '鸱吻上颌';
+  upperJaw.userData.kind = 'chiwen-upper-jaw';
+  upperJaw.rotation.z = 0.12;
+  upperJaw.position.set(-0.96, 0.78, 0);
+  const lowerJaw = new Mesh(new BoxGeometry(0.88, 0.18, 0.52), materials.gold);
+  lowerJaw.name = '鸱吻下颌';
+  lowerJaw.userData.kind = 'chiwen-lower-jaw';
+  lowerJaw.rotation.z = -0.14;
+  lowerJaw.position.set(-0.88, 0.42, 0);
+  const jawHinge = new Mesh(new SphereGeometry(0.22, 10, 8), materials.gold);
+  jawHinge.name = '鸱吻颌关节';
+  jawHinge.userData.kind = 'chiwen-jaw-hinge';
+  jawHinge.position.set(-0.48, 0.66, 0);
+
+  const horns = [
+    { x: -0.36, y: 1.62, z: 0.12, rotation: 0.58 },
+    { x: -0.06, y: 1.58, z: -0.1, rotation: 0.34 },
+  ].map(({ x, y, z, rotation }, index) => {
+    const horn = new Mesh(new ConeGeometry(0.11, 0.58, 8), materials.gold);
+    horn.name = `鸱吻龙角${index + 1}`;
+    horn.userData.kind = 'chiwen-horn';
+    horn.rotation.z = rotation;
+    horn.position.set(x, y, z);
+    return horn;
+  });
+
+  const eyes: Mesh[] = [];
+  const pupils: Mesh[] = [];
+  for (const zSide of [-1, 1]) {
+    const eye = new Mesh(new SphereGeometry(0.13, 10, 8), materials.stone);
+    eye.name = zSide < 0 ? '鸱吻后侧眼' : '鸱吻前侧眼';
+    eye.userData.kind = 'chiwen-eye';
+    eye.position.set(-0.86, 1.2, zSide * 0.36);
+    const pupil = new Mesh(new SphereGeometry(0.055, 8, 6), materials.darkTimber);
+    pupil.name = zSide < 0 ? '鸱吻后侧瞳孔' : '鸱吻前侧瞳孔';
+    pupil.userData.kind = 'chiwen-pupil';
+    pupil.position.set(-0.9, 1.2, zSide * 0.47);
+    eyes.push(eye);
+    pupils.push(pupil);
+  }
+
+  const whiskers = [-1, 1].map((zSide, index) => {
+    const curve = new CatmullRomCurve3([
+      new Vector3(-1.14, 0.95, zSide * 0.26),
+      new Vector3(-1.34, 1.1, zSide * 0.32),
+      new Vector3(-1.42, 1.36, zSide * 0.36),
+    ]);
+    const whisker = new Mesh(new TubeGeometry(curve, 10, 0.025, 6, false), materials.gold);
+    whisker.name = `鸱吻龙须${index + 1}`;
+    whisker.userData.kind = 'chiwen-whisker';
+    return whisker;
+  });
+
+  chiwen.add(
+    base,
+    body,
+    tail,
+    tailTip,
+    ...backScales,
+    head,
+    snout,
+    upperJaw,
+    lowerJaw,
+    jawHinge,
+    ...horns,
+    ...eyes,
+    ...pupils,
+    ...whiskers,
+  );
+  chiwen.scale.set(side * 1.3, 1.24, 1.3);
   return chiwen;
 }
 

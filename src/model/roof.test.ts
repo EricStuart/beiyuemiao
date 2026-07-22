@@ -208,4 +208,49 @@ describe('hip ridge alignment', () => {
       expect(bounds.max.x).toBeGreaterThan(ridgeBounds.min.x);
     });
   });
+
+  it('builds the reference-inspired front chiwen component structure', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    const upper = roofs.children[1]!;
+    const chiwen = upper.children.filter((child) => child.userData.kind === 'chiwen');
+
+    expect(chiwen).toHaveLength(2);
+    chiwen.forEach((ornament) => {
+      const components = new Map<string, Object3D[]>();
+      ornament.traverse((child) => {
+        const kind = child.userData.kind as string | undefined;
+        if (!kind) return;
+        const matches = components.get(kind) ?? [];
+        matches.push(child);
+        components.set(kind, matches);
+      });
+
+      expect(ornament.userData.profile).toBe('front-reference');
+      expect(components.get('chiwen-body')).toHaveLength(1);
+      expect(components.get('chiwen-tail')).toHaveLength(1);
+      expect(components.get('chiwen-back-scale')?.length).toBeGreaterThanOrEqual(6);
+      expect(components.get('chiwen-head')).toHaveLength(1);
+      expect(components.get('chiwen-upper-jaw')).toHaveLength(1);
+      expect(components.get('chiwen-lower-jaw')).toHaveLength(1);
+      expect(components.get('chiwen-horn')).toHaveLength(2);
+      expect(components.get('chiwen-eye')).toHaveLength(2);
+      expect(components.get('chiwen-pupil')).toHaveLength(2);
+
+      const upperJaw = components.get('chiwen-upper-jaw')![0]!;
+      const lowerJaw = components.get('chiwen-lower-jaw')![0]!;
+      expect(upperJaw.position.y - lowerJaw.position.y).toBeGreaterThan(0.18);
+
+      const headBounds = new Box3().setFromObject(components.get('chiwen-head')![0]!);
+      const tailBounds = new Box3().setFromObject(components.get('chiwen-tail')![0]!);
+      const bodyBounds = new Box3().setFromObject(components.get('chiwen-body')![0]!);
+      const exposedScale = components.get('chiwen-back-scale')!.some((scale) => (
+        new Box3().setFromObject(scale).max.z > bodyBounds.max.z - 0.01
+      ));
+      const bounds = new Box3().setFromObject(ornament);
+      const size = bounds.getSize(new Vector3());
+      expect(tailBounds.max.y).toBeGreaterThan(headBounds.max.y + 0.35);
+      expect(exposedScale).toBe(true);
+      expect(size.y / size.x).toBeGreaterThan(1.35);
+    });
+  });
 });
