@@ -7,9 +7,13 @@ import {
   ExtrudeGeometry,
   Float32BufferAttribute,
   Group,
+  InstancedMesh,
   LineBasicMaterial,
   LineSegments,
+  Matrix4,
   Mesh,
+  MeshStandardMaterial,
+  Quaternion,
   Shape,
   SphereGeometry,
   TubeGeometry,
@@ -137,7 +141,97 @@ function createRoofSurface(dimensions: RoofDimensions, material: Material, segme
   return mesh;
 }
 
-function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, green: boolean): LineSegments {
+interface TilePlacement {
+  position: Vector3;
+  tangent: Vector3;
+  side: 'front' | 'back' | 'left' | 'right';
+  ratio: number;
+  t: number;
+  length: number;
+}
+
+function collectTilePlacements(
+  dimensions: RoofDimensions,
+  quality: QualityLevel,
+): TilePlacement[] {
+  const columns = quality === 'high' ? 38 : quality === 'medium' ? 28 : 18;
+  const rows = quality === 'high' ? 14 : quality === 'medium' ? 11 : 8;
+  const halfWidth = dimensions.width / 2;
+  const halfDepth = dimensions.depth / 2;
+  const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
+  const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
+  const placements: TilePlacement[] = [];
+
+  const pointAt = (
+    side: TilePlacement['side'],
+    ratio: number,
+    t: number,
+  ): Vector3 => {
+    const extentX = halfWidth + (topHalfWidth - halfWidth) * t;
+    const extentZ = halfDepth + (topHalfDepth - halfDepth) * t;
+    const y = profileY(t, dimensions) + evaluateWingLift(ratio, t) + 0.08;
+    if (side === 'front') return new Vector3(ratio * extentX, y, extentZ);
+    if (side === 'back') return new Vector3(ratio * extentX, y, -extentZ);
+    if (side === 'right') return new Vector3(extentX, y, ratio * extentZ);
+    return new Vector3(-extentX, y, ratio * extentZ);
+  };
+
+  for (const side of ['front', 'back', 'left', 'right'] as const) {
+    for (let row = 0; row < rows; row += 1) {
+      const t1 = row / rows;
+      const t2 = (row + 1) / rows;
+      const t = (t1 + t2) / 2;
+      for (let column = 0; column <= columns; column += 1) {
+        const ratio = -0.96 + (1.92 * column) / columns;
+        const start = pointAt(side, ratio, t1);
+        const end = pointAt(side, ratio, t2);
+        placements.push({
+          position: start.clone().lerp(end, 0.5),
+          tangent: end.clone().sub(start).normalize(),
+          side,
+          ratio,
+          t,
+          length: start.distanceTo(end) * 0.96,
+        });
+      }
+    }
+  }
+  return placements;
+}
+
+function createInstancedTiles(
+  placements: TilePlacement[],
+  material: MeshStandardMaterial,
+  name: string,
+  kind: string,
+): InstancedMesh {
+  const geometry = new CylinderGeometry(0.14, 0.16, 1, 6, 1, true, 0, Math.PI);
+  const mesh = new InstancedMesh(geometry, material, placements.length);
+  const up = new Vector3(0, 1, 0);
+  const quaternion = new Quaternion();
+  const matrix = new Matrix4();
+  const scale = new Vector3();
+  const base = material.color.clone();
+  placements.forEach((placement, index) => {
+    quaternion.setFromUnitVectors(up, placement.tangent);
+    scale.set(1, placement.length, 1);
+    matrix.compose(placement.position, quaternion, scale);
+    mesh.setMatrixAt(index, matrix);
+    const shade = index % 3 === 0 ? 0.93 : index % 3 === 1 ? 1 : 1.05;
+    mesh.setColorAt(index, base.clone().multiplyScalar(shade));
+  });
+  mesh.name = name;
+  mesh.userData.kind = kind;
+  mesh.userData.instanceCount = placements.length;
+  mesh.userData.surfaceOffset = 0.08;
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.computeBoundingBox();
+  mesh.computeBoundingSphere();
+  return mesh;
+}
+
+function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
   const count = quality === 'high' ? 54 : quality === 'medium' ? 38 : 24;
   const profileSegments = quality === 'low' ? 8 : 12;
   const points = sampleRaisedEaveProfile(
@@ -181,7 +275,7 @@ function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, gree
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   return new LineSegments(
     geometry,
-    new LineBasicMaterial({ color: green ? 0x3f765b : 0x737d76, transparent: true, opacity: 0.8 }),
+    new LineBasicMaterial({ color, transparent: true, opacity: 0.72 }),
   );
 }
 
@@ -426,7 +520,9 @@ function createRoofLevel(dimensions: RoofDimensions, materials: BuildingMaterial
   group.userData.baseY = dimensions.baseY;
   group.userData.ridgeY = dimensions.ridgeY;
   group.add(createRoofSurface(dimensions, materials.tile, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
-  group.add(createTileLines(dimensions, quality, false));
+  const placements = collectTilePlacements(dimensions, quality);
+  group.add(createInstancedTiles(placements, materials.tile, '坡面筒瓦覆盖', 'roof-tile-covering'));
+  group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
 
   addRidges(group, dimensions, materials);
   return group;

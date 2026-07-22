@@ -19,6 +19,17 @@ describe('hip ridge alignment', () => {
     expect(materials.tile.roughness).toBeGreaterThan(0.85);
   });
 
+  it('covers both roof levels with instanced faded tiles', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    const coverings = roofs.children.map((roof) => roof.getObjectByName('坡面筒瓦覆盖'));
+    expect(coverings.every(Boolean)).toBe(true);
+    coverings.forEach((covering) => {
+      expect(covering!.userData.kind).toBe('roof-tile-covering');
+      expect(covering!.userData.instanceCount).toBeGreaterThan(400);
+      expect(covering!.userData.surfaceOffset).toBeGreaterThanOrEqual(0.07);
+    });
+  });
+
   it('keeps every diagonal ridge sample seated on the roof tiles', () => {
     const dimensions: RoofDimensions = {
       width: 61.8,
@@ -68,7 +79,9 @@ describe('hip ridge alignment', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
     const directCylinders = upper.children.filter(
-      (child) => child instanceof Mesh && child.geometry instanceof CylinderGeometry,
+      (child) => child instanceof Mesh
+        && child.geometry instanceof CylinderGeometry
+        && child.userData.kind === 'main-ridge',
     );
     expect(directCylinders).toHaveLength(1);
     expect(directCylinders[0]!.userData.kind).toBe('main-ridge');
@@ -208,7 +221,9 @@ describe('hip ridge alignment', () => {
     const lowerChiwen = findChiwen(lowerRoof);
     const upperChiwen = findChiwen(upperRoof);
     const mainRidge = upperRoof.children.find(
-      (child) => child instanceof Mesh && child.geometry instanceof CylinderGeometry,
+      (child) => child instanceof Mesh
+        && child.geometry instanceof CylinderGeometry
+        && child.userData.kind === 'main-ridge',
     );
 
     expect(lowerChiwen).toHaveLength(0);
