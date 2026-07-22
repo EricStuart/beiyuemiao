@@ -10,6 +10,20 @@ import {
 import { createTimberFrame } from './timber-frame';
 
 describe('lower timber frame', () => {
+  it('seats every outer perimeter column on a white stone base', () => {
+    const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const bases = grid.children.filter(
+      (child) => child instanceof Mesh && child.userData.kind === 'outer-column-base',
+    );
+
+    expect(bases).toHaveLength(30);
+    bases.forEach((base) => {
+      const bounds = new Box3().setFromObject(base);
+      expect(bounds.min.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
+      expect(bounds.max.y).toBeGreaterThan(DENING_HALL.platformHeight);
+    });
+  });
+
   it('uses the documented 4.89 metre height for lower perimeter columns', () => {
     const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const columns = grid.children.filter(

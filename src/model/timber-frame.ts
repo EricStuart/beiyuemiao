@@ -272,6 +272,28 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
 
   addPerimeterColumns(grid, xAxis, zAxis, platformTop, outerTop, 0.46, materials.timber, 'lower');
 
+  const columnBaseHeight = 0.32;
+  const addOuterColumnBase = (x: number, z: number): void => {
+    const base = new Mesh(
+      new CylinderGeometry(0.68, 0.78, columnBaseHeight, 16),
+      materials.stone,
+    );
+    base.name = '外围柱白石柱础';
+    base.userData.kind = 'outer-column-base';
+    base.position.set(x, platformTop + columnBaseHeight / 2, z);
+    grid.add(base);
+  };
+  const outerFront = zAxis.at(-1) ?? 0;
+  const outerRear = zAxis[0] ?? 0;
+  for (const x of xAxis) {
+    addOuterColumnBase(x, outerFront);
+    addOuterColumnBase(x, outerRear);
+  }
+  for (const z of zAxis.slice(1, -1)) {
+    addOuterColumnBase(xAxis[0] ?? 0, z);
+    addOuterColumnBase(xAxis.at(-1) ?? 0, z);
+  }
+
   const hallXAxis = xAxis.slice(1, -1);
   const hallZAxis = zAxis.slice(1, -1);
   addPerimeterColumns(grid, hallXAxis, hallZAxis, platformTop, outerTop + 0.25, 0.5, materials.darkTimber, 'lower');

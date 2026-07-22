@@ -1,10 +1,31 @@
-import { Box3, Mesh, Vector3 } from 'three';
+import { Box3, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createFoundations } from './foundations';
 import { createBuildingMaterials } from './materials';
 
 describe('platform layer geometry', () => {
+  it('covers the main platform and terrace with grey brick paving', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const mainPaving = group.children.find(
+      (child) => child.userData.kind === 'platform-paving',
+    ) as Mesh;
+    const terrace = group.children.find(
+      (child) => child.userData.kind === 'platform-terrace',
+    );
+    const terracePaving = terrace?.children.find(
+      (child) => child.userData.kind === 'terrace-paving',
+    ) as Mesh;
+
+    expect(mainPaving).toBeDefined();
+    expect(terracePaving).toBeDefined();
+    expect((mainPaving.material as MeshStandardMaterial).color.getHex()).toBe(0x77756c);
+    expect((terracePaving.material as MeshStandardMaterial).color.getHex()).toBe(0x77756c);
+    expect(new Box3().setFromObject(mainPaving).max.y).toBeGreaterThan(DENING_HALL.platformHeight);
+    expect(new Box3().setFromObject(terracePaving).max.y).toBeGreaterThan(DENING_HALL.platformHeight);
+  });
+
   it('stacks the stone cap above the upper brick layer without overlap', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const { group } = createFoundations(DENING_HALL, materials);
@@ -47,7 +68,7 @@ describe('platform layer geometry', () => {
     expect(terraceBounds.max.z).toBeGreaterThan(mainBounds.max.z);
     expect(terraceBounds.min.x).toBeGreaterThan(mainBounds.min.x);
     expect(terraceBounds.max.x).toBeLessThan(mainBounds.max.x);
-    expect(terraceBounds.max.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
+    expect(terraceBounds.max.y).toBeCloseTo(DENING_HALL.platformHeight + 0.08, 5);
   });
 
   it('uses the measured main platform and terrace footprints', () => {

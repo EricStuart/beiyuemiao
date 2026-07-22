@@ -127,6 +127,11 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   cap.name = '主体台基顶面';
   cap.userData.kind = 'platform-main';
   group.add(lower, middle, upper, cap);
+  const mainPaving = box(width - 0.6, 0.08, depth - 0.6, materials.paving);
+  mainPaving.position.y = data.platformHeight + 0.04;
+  mainPaving.name = '主台基灰砖铺地';
+  mainPaving.userData.kind = 'platform-paving';
+  group.add(mainPaving);
 
   const terraceWidth = data.terraceWidth.value;
   const terraceDepth = data.terraceDepth.value;
@@ -142,7 +147,11 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   terraceBand.position.set(0, groundY + 0.9, terraceCenterZ);
   const terraceCap = box(terraceWidth + 0.3, capHeight, terraceDepth + 0.3, materials.stone);
   terraceCap.position.set(0, upperTop + capHeight / 2, terraceCenterZ);
-  terrace.add(terraceWall, terraceBand, terraceCap);
+  const terracePaving = box(terraceWidth - 0.3, 0.08, terraceDepth - 0.3, materials.paving);
+  terracePaving.position.set(0, data.platformHeight + 0.04, terraceCenterZ);
+  terracePaving.name = '月台灰砖铺地';
+  terracePaving.userData.kind = 'terrace-paving';
+  terrace.add(terraceWall, terraceBand, terraceCap, terracePaving);
   group.add(terrace);
 
   const stairWidth = 6.4;

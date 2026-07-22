@@ -18,6 +18,7 @@ export interface BuildingMaterials {
   glazedGreen: MeshPhysicalMaterial;
   stone: MeshStandardMaterial;
   brick: MeshStandardMaterial;
+  paving: MeshStandardMaterial;
   door: MeshStandardMaterial;
   gold: MeshPhysicalMaterial;
   all: Material[];
@@ -44,6 +45,7 @@ export function createBuildingMaterials(data: BuildingData): BuildingMaterials {
   diamondTile.vertexColors = true;
   const stone = weathered(data.palette.stone, 0.96);
   const brick = weathered(data.palette.brick, 0.98);
+  const paving = weathered(0x77756c, 0.96);
   const door = weathered(0x4a211d, 0.88);
   const glazedGreen = new MeshPhysicalMaterial({
     color: data.palette.glazedGreen,
@@ -69,8 +71,9 @@ export function createBuildingMaterials(data: BuildingData): BuildingMaterials {
     glazedGreen,
     stone,
     brick,
+    paving,
     door,
     gold,
-    all: [timber, darkTimber, paintedGreen, paintedBlue, tile, tileRib, diamondTile, glazedGreen, stone, brick, door, gold],
+    all: [timber, darkTimber, paintedGreen, paintedBlue, tile, tileRib, diamondTile, glazedGreen, stone, brick, paving, door, gold],
   };
 }
