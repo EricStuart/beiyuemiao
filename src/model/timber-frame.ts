@@ -173,6 +173,7 @@ function addEnclosurePanel(
   platformTop: number,
   height: number,
   materials: BuildingMaterials,
+  kind: 'enclosure-panel' | 'inner-enclosure-panel' = 'enclosure-panel',
 ): void {
   const facade = side === 'front' || side === 'rear';
   const span = end - start;
@@ -183,7 +184,7 @@ function addEnclosurePanel(
     materials.door,
   );
   panel.name = '首层围护板';
-  panel.userData.kind = 'enclosure-panel';
+  panel.userData.kind = kind;
   panel.userData.side = side;
   panel.userData.bay = bay;
   panel.position.set(
@@ -201,7 +202,9 @@ function addEnclosurePanel(
       materials.darkTimber,
     );
     mullion.name = '首层围护竖棂';
-    mullion.userData.kind = 'enclosure-mullion';
+    mullion.userData.kind = kind === 'inner-enclosure-panel'
+      ? 'inner-enclosure-mullion'
+      : 'enclosure-mullion';
     mullion.userData.side = side;
     mullion.userData.bay = bay;
     mullion.position.set(
@@ -355,6 +358,62 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
     addEnclosurePanel(lowerEnclosure, 'right', bay, rear, front, hallRight - 0.05, platformTop, enclosureHeight, materials);
   }
   grid.add(lowerEnclosure);
+
+  const innerEnclosure = new Group();
+  innerEnclosure.name = '内槽 C 字形围护';
+  const innerRearZ = zAxis[2];
+  const innerLeftX = xAxis[2];
+  const innerRightX = xAxis[7];
+  if (innerRearZ !== undefined && innerLeftX !== undefined && innerRightX !== undefined) {
+    for (let bay = 2; bay < 7; bay += 1) {
+      const left = xAxis[bay];
+      const right = xAxis[bay + 1];
+      if (left === undefined || right === undefined) continue;
+      addEnclosurePanel(
+        innerEnclosure,
+        'rear',
+        bay - 2,
+        left,
+        right,
+        innerRearZ,
+        platformTop,
+        enclosureHeight,
+        materials,
+        'inner-enclosure-panel',
+      );
+    }
+
+    for (let bay = 2; bay < 4; bay += 1) {
+      const rear = zAxis[bay];
+      const front = zAxis[bay + 1];
+      if (rear === undefined || front === undefined) continue;
+      addEnclosurePanel(
+        innerEnclosure,
+        'left',
+        bay - 2,
+        rear,
+        front,
+        innerLeftX,
+        platformTop,
+        enclosureHeight,
+        materials,
+        'inner-enclosure-panel',
+      );
+      addEnclosurePanel(
+        innerEnclosure,
+        'right',
+        bay - 2,
+        rear,
+        front,
+        innerRightX,
+        platformTop,
+        enclosureHeight,
+        materials,
+        'inner-enclosure-panel',
+      );
+    }
+  }
+  grid.add(innerEnclosure);
 
   const upperX = xAxis.slice(1, -1);
   const upperZ = zAxis.slice(1, -1);

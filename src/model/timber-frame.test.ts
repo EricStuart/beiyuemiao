@@ -87,6 +87,25 @@ describe('lower timber frame', () => {
     expect(doorParts).toHaveLength(0);
   });
 
+  it('builds a front-open C-shaped inner enclosure on the platform', () => {
+    const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    const enclosure = grid.getObjectByName('内槽 C 字形围护');
+    const panels: Mesh[] = [];
+
+    expect(enclosure).toBeDefined();
+    enclosure!.traverse((child) => {
+      if (child instanceof Mesh && child.userData.kind === 'inner-enclosure-panel') panels.push(child);
+    });
+
+    const sideCounts = { front: 0, rear: 0, left: 0, right: 0 };
+    panels.forEach((panel) => {
+      sideCounts[panel.userData.side as keyof typeof sideCounts] += 1;
+      expect(new Box3().setFromObject(panel).min.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
+    });
+
+    expect(sideCounts).toEqual({ front: 0, rear: 5, left: 2, right: 2 });
+  });
+
   it('places the 德宁之殿 plaque at the centre of the upper front facade', () => {
     const { grid } = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
     const plaques = grid.children.filter((child) => child.userData.kind === 'plaque');
