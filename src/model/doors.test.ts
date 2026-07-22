@@ -22,4 +22,12 @@ describe('Dening Hall doors', () => {
       expect(pivot.userData.kind).toBe('door-leaf-pivot');
     });
   });
+
+  it('opens both facade door groups toward the interior', () => {
+    const result = createTimberFrame(DENING_HALL, createBuildingMaterials(DENING_HALL));
+    expect(result.doors.front[0]!.openRotationY).toBeGreaterThan(0);
+    expect(result.doors.front[1]!.openRotationY).toBeLessThan(0);
+    expect(result.doors.rear[0]!.openRotationY).toBeLessThan(0);
+    expect(result.doors.rear[1]!.openRotationY).toBeGreaterThan(0);
+  });
 });

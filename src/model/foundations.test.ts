@@ -26,6 +26,25 @@ describe('platform layer geometry', () => {
     expect(new Box3().setFromObject(terracePaving).max.y).toBeGreaterThan(DENING_HALL.platformHeight);
   });
 
+  it('drops platform railing boards to the platform surface and fills both stair-adjacent gaps', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const boards: Mesh[] = [];
+    group.traverse((child) => {
+      if (child instanceof Mesh && child.userData.kind === 'platform-balustrade-board') boards.push(child);
+    });
+    const nearStairRails = group.children.filter(
+      (child) => child.userData.kind === 'platform-balustrade-gap'
+        && String(child.userData.side).includes('near-stair'),
+    );
+
+    expect(boards.length).toBeGreaterThanOrEqual(7);
+    boards.forEach((board) => {
+      expect(new Box3().setFromObject(board).min.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
+    });
+    expect(nearStairRails).toHaveLength(2);
+  });
+
   it('stacks the stone cap above the upper brick layer without overlap', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const { group } = createFoundations(DENING_HALL, materials);

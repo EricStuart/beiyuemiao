@@ -212,12 +212,14 @@ function createInstancedTiles(
   const geometry = new CylinderGeometry(0.14, 0.16, 1, 6, 1, true, 0, Math.PI);
   const mesh = new InstancedMesh(geometry, material, placements.length);
   const up = new Vector3(0, 1, 0);
+  const tileRollRadians = Math.PI / 2;
+  const localRoll = new Quaternion().setFromAxisAngle(up, tileRollRadians);
   const quaternion = new Quaternion();
   const matrix = new Matrix4();
   const scale = new Vector3();
   const base = material.color.clone();
   placements.forEach((placement, index) => {
-    quaternion.setFromUnitVectors(up, placement.tangent);
+    quaternion.setFromUnitVectors(up, placement.tangent).multiply(localRoll);
     scale.set(1, placement.length, 1);
     matrix.compose(placement.position, quaternion, scale);
     mesh.setMatrixAt(index, matrix);
@@ -228,6 +230,7 @@ function createInstancedTiles(
   mesh.userData.kind = kind;
   mesh.userData.instanceCount = placements.length;
   mesh.userData.surfaceOffset = 0.08;
+  mesh.userData.tileRollRadians = tileRollRadians;
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.computeBoundingBox();

@@ -13,8 +13,8 @@ import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 describe('hip ridge alignment', () => {
   it('uses faded yellow tiles and aged green diamond tiles', () => {
     const materials = createBuildingMaterials(DENING_HALL);
-    expect(materials.tile.color.getHex()).toBe(0xa89163);
-    expect(materials.tileRib.color.getHex()).toBe(0x8d7955);
+    expect(materials.tile.color.getHex()).toBe(0x777447);
+    expect(materials.tileRib.color.getHex()).toBe(0x55553a);
     expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
     expect(materials.tile.roughness).toBeGreaterThan(0.85);
     expect(materials.tile.vertexColors).toBe(false);
@@ -29,6 +29,7 @@ describe('hip ridge alignment', () => {
       expect(covering!.userData.kind).toBe('roof-tile-covering');
       expect(covering!.userData.instanceCount).toBeGreaterThan(400);
       expect(covering!.userData.surfaceOffset).toBeGreaterThanOrEqual(0.07);
+      expect(covering!.userData.tileRollRadians).toBeCloseTo(Math.PI / 2, 5);
     });
   });
 

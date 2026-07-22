@@ -29,20 +29,23 @@ function addStraightBalustrade(
   z: number,
   platformTop: number,
   material: Material,
+  railKind = 'platform-balustrade',
 ): void {
-  if (length <= 0.8) return;
+  if (length <= 0.1) return;
   const railGroup = new Group();
   railGroup.name = `白石栏杆-${side}`;
-  railGroup.userData.kind = 'platform-balustrade';
+  railGroup.userData.kind = railKind;
   railGroup.userData.side = side;
 
+  const boardHeight = 0.9;
   const panel = box(
     orientation === 'x' ? length : 0.3,
-    0.34,
+    boardHeight,
     orientation === 'z' ? length : 0.3,
     material,
   );
-  panel.position.set(x, platformTop + 0.54, z);
+  panel.position.set(x, platformTop + boardHeight / 2, z);
+  panel.userData.kind = 'platform-balustrade-board';
   railGroup.add(panel);
 
   const postCount = Math.max(2, Math.ceil(length / 4));
@@ -210,6 +213,19 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
       mainFrontZ,
       data.platformHeight,
       materials.stone,
+    );
+  }
+  for (const side of [-1, 1]) {
+    addStraightBalustrade(
+      group,
+      side < 0 ? 'left-near-stair' : 'right-near-stair',
+      'x',
+      0.35,
+      side * (terraceHalf + sideFlightLength + 0.175),
+      mainFrontZ,
+      data.platformHeight,
+      materials.stone,
+      'platform-balustrade-gap',
     );
   }
   addStraightBalustrade(group, 'rear', 'x', width + 0.35, 0, mainRearZ, data.platformHeight, materials.stone);

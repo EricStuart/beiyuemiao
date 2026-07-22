@@ -75,12 +75,12 @@ export function createDoorPair(options: DoorPairOptions): DoorPairResult {
 
     pivot.add(leaf);
     group.add(pivot);
-    const outwardSign = options.side === 'front' ? 1 : -1;
+    const inwardSign = options.side === 'front' ? -1 : 1;
     const leafSign = isLeft ? -1 : 1;
     return {
       pivot,
       closedRotationY: 0,
-      openRotationY: openingAngle * outwardSign * leafSign,
+      openRotationY: openingAngle * inwardSign * leafSign,
     };
   };
 
