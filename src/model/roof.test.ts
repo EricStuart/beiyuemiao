@@ -11,15 +11,17 @@ import {
 import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 
 describe('hip ridge alignment', () => {
-  it('uses a dark green roof surface with dark yellow tiles and brighter glazed ridges', () => {
+  it('uses gray roof surfaces and tiles with green diamond tiles and glazed ridges', () => {
     const materials = createBuildingMaterials(DENING_HALL);
-    expect(materials.roofSurface.color.getHex()).toBe(0x1a382c);
-    expect(materials.tile.color.getHex()).toBe(0x82794a);
-    expect(materials.tileRib.color.getHex()).toBe(0x5a5737);
+    expect(materials.roofSurface.color.getHex()).toBe(0x4f534f);
+    expect(materials.tile.color.getHex()).toBe(0x74736c);
+    expect(materials.tileRib.color.getHex()).toBe(0x565852);
     expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
     expect(materials.glazedGreen.color.getHex()).toBe(0x255942);
-    expect(materials.roofSurface.color.getHSL({ h: 0, s: 0, l: 0 }).l)
-      .toBeLessThan(materials.glazedGreen.color.getHSL({ h: 0, s: 0, l: 0 }).l);
+    const roofHsl = materials.roofSurface.color.getHSL({ h: 0, s: 0, l: 0 });
+    const ridgeHsl = materials.glazedGreen.color.getHSL({ h: 0, s: 0, l: 0 });
+    expect(roofHsl.s).toBeLessThan(0.06);
+    expect(ridgeHsl.s).toBeGreaterThan(roofHsl.s);
     expect(materials.tile.roughness).toBeGreaterThan(0.85);
     expect(materials.tile.vertexColors).toBe(false);
     expect(materials.diamondTile.vertexColors).toBe(false);
@@ -50,7 +52,7 @@ describe('hip ridge alignment', () => {
     });
   });
 
-  it('recolors the outermost row in the existing tile mesh without outline objects', () => {
+  it('recolors eave and ridge-adjacent tiles in the existing mesh without outline objects', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const roofs = createRoofs(DENING_HALL, materials, 'high');
 
@@ -65,12 +67,25 @@ describe('hip ridge alignment', () => {
       );
       expect(covering).toBeInstanceOf(InstancedMesh);
       expect(covering!.userData.eaveGreenInstanceCount).toBe(118);
+      expect(covering!.userData.ridgeGreenInstanceCount).toBe(112);
+      expect(covering!.userData.greenEdgeInstanceCount).toBe(222);
       expect(covering!.userData.eaveGreenColor).toBe(0x255942);
+      expect(covering!.userData.edgeGreenColor).toBe(0x255942);
 
       const instanceTint = new Color();
       (covering as InstancedMesh).getColorAt(0, instanceTint);
       const renderedColor = instanceTint.multiply(materials.tile.color);
       expect(renderedColor.getHex()).toBe(materials.glazedGreen.color.getHex());
+
+      const ridgeTint = new Color();
+      (covering as InstancedMesh).getColorAt(39, ridgeTint);
+      const renderedRidgeColor = ridgeTint.multiply(materials.tile.color);
+      expect(renderedRidgeColor.getHex()).toBe(materials.glazedGreen.color.getHex());
+
+      const ordinaryTint = new Color();
+      (covering as InstancedMesh).getColorAt(40, ordinaryTint);
+      const renderedOrdinaryColor = ordinaryTint.multiply(materials.tile.color);
+      expect(renderedOrdinaryColor.getHex()).toBe(materials.tile.color.getHex());
     });
   });
 

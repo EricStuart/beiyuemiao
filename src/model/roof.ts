@@ -230,7 +230,7 @@ function createInstancedTiles(
   material: MeshStandardMaterial,
   name: string,
   kind: string,
-  outerEaveColor?: Color,
+  edgeColor?: Color,
 ): InstancedMesh {
   const geometry = new CylinderGeometry(0.14, 0.16, 1, 6, 1, true, 0, Math.PI);
   const mesh = new InstancedMesh(geometry, material, placements.length);
@@ -251,15 +251,16 @@ function createInstancedTiles(
     scale.set(1, placement.length, 1);
     matrix.compose(placement.position, quaternion, scale);
     mesh.setMatrixAt(index, matrix);
-    if (placement.row === 0 && outerEaveColor) {
-      const tint = outerEaveColor.clone();
+    const isGreenEdge = placement.row === 0 || Math.abs(placement.ratio) >= 0.95;
+    if (isGreenEdge && edgeColor) {
+      const tint = edgeColor.clone();
       tint.r /= Math.max(base.r, 0.000001);
       tint.g /= Math.max(base.g, 0.000001);
       tint.b /= Math.max(base.b, 0.000001);
       mesh.setColorAt(index, tint);
     } else {
       const shade = index % 3 === 0 ? 0.93 : index % 3 === 1 ? 1 : 1.05;
-      mesh.setColorAt(index, base.clone().multiplyScalar(shade));
+      mesh.setColorAt(index, new Color(1, 1, 1).multiplyScalar(shade));
     }
   });
   mesh.name = name;
@@ -268,9 +269,16 @@ function createInstancedTiles(
   mesh.userData.surfaceOffset = 0.08;
   mesh.userData.tileOrientationMode = 'surface-normal';
   mesh.userData.tileOpeningDirection = 'toward-roof-surface';
-  if (outerEaveColor) {
+  if (edgeColor) {
     mesh.userData.eaveGreenInstanceCount = placements.filter(({ row }) => row === 0).length;
-    mesh.userData.eaveGreenColor = outerEaveColor.getHex();
+    mesh.userData.ridgeGreenInstanceCount = placements.filter(
+      ({ ratio }) => Math.abs(ratio) >= 0.95,
+    ).length;
+    mesh.userData.greenEdgeInstanceCount = placements.filter(
+      ({ row, ratio }) => row === 0 || Math.abs(ratio) >= 0.95,
+    ).length;
+    mesh.userData.eaveGreenColor = edgeColor.getHex();
+    mesh.userData.edgeGreenColor = edgeColor.getHex();
   }
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
