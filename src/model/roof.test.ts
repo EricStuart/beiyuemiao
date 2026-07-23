@@ -10,6 +10,14 @@ import {
 } from './roof';
 import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 
+function collectMeshes(root: Object3D): Mesh[] {
+  const meshes: Mesh[] = [];
+  root.traverse((child) => {
+    if (child instanceof Mesh) meshes.push(child);
+  });
+  return meshes;
+}
+
 describe('hip ridge alignment', () => {
   it('uses gray roof surfaces and tiles with green diamond tiles and glazed ridges', () => {
     const materials = createBuildingMaterials(DENING_HALL);
@@ -344,6 +352,39 @@ describe('hip ridge alignment', () => {
     });
 
     expect(totalBeasts).toBe(8);
+  });
+
+  it('uses yellow glaze on every small ridge beast while keeping chiwen green', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const roofs = createRoofs(DENING_HALL, materials, 'high');
+    const smallBeasts: Object3D[] = [];
+
+    roofs.traverse((child) => {
+      if (
+        child.userData.kind === 'mid-ridge-ornament'
+        || child.userData.kind === 'ridge-end-beast'
+      ) {
+        smallBeasts.push(child);
+      }
+    });
+
+    expect(smallBeasts).toHaveLength(16);
+    smallBeasts.forEach((beast) => {
+      const meshes = collectMeshes(beast);
+      expect(meshes.length).toBeGreaterThan(0);
+      meshes.forEach((mesh) => {
+        expect(mesh.material).toBe(materials.yellowGlaze);
+      });
+    });
+
+    const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
+    const chiwen = upper.children.filter((child) => child.userData.kind === 'chiwen');
+    expect(chiwen).toHaveLength(2);
+    chiwen.forEach((ornament) => {
+      expect(collectMeshes(ornament).some(
+        (mesh) => mesh.material === materials.glazedGreen,
+      )).toBe(true);
+    });
   });
 
   it('uses a vertically thicker top ridge and ridge band', () => {
