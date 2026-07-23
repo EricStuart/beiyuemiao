@@ -32,6 +32,8 @@ function addStraightBalustrade(
   material: Material,
   railKind = 'platform-balustrade',
   omitStartPost = false,
+  omitEndPost = false,
+  postCountOverride?: number,
 ): void {
   if (length <= 0.1) return;
   const railGroup = new Group();
@@ -50,8 +52,9 @@ function addStraightBalustrade(
   panel.userData.kind = 'platform-balustrade-board';
   railGroup.add(panel);
 
-  const postCount = Math.max(2, Math.ceil(length / 4));
-  for (let index = omitStartPost ? 1 : 0; index <= postCount; index += 1) {
+  const postCount = postCountOverride ?? Math.max(2, Math.ceil(length / 4));
+  const lastPostIndex = omitEndPost ? postCount - 1 : postCount;
+  for (let index = omitStartPost ? 1 : 0; index <= lastPostIndex; index += 1) {
     const ratio = index / postCount;
     const post = new Mesh(new CylinderGeometry(0.2, 0.25, 1.35, 8), material);
     post.position.set(
@@ -205,6 +208,8 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   const terraceHalf = terraceWidth / 2;
   const sideFlightOuterX = terraceHalf + sideFlightLength;
   const mainFrontSegment = mainEdgeX - sideFlightOuterX;
+  const frontPostCount = Math.max(2, Math.ceil(mainFrontSegment / 4));
+  const frontBayLength = mainFrontSegment / frontPostCount;
   for (const side of [-1, 1]) {
     addStraightBalustrade(
       group,
@@ -215,6 +220,20 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
       mainFrontZ,
       data.platformHeight,
       materials.stone,
+    );
+    addStraightBalustrade(
+      group,
+      side < 0 ? 'front-center-left' : 'front-center-right',
+      'x',
+      frontBayLength,
+      side * (sideFlightOuterX - frontBayLength / 2),
+      mainFrontZ,
+      data.platformHeight,
+      materials.stone,
+      'front-center-extension',
+      side < 0,
+      side > 0,
+      1,
     );
   }
   addStraightBalustrade(group, 'rear', 'x', width + 0.35, 0, mainRearZ, data.platformHeight, materials.stone);

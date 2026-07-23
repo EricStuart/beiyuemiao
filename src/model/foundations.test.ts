@@ -163,6 +163,45 @@ describe('platform layer geometry', () => {
     expect(new Box3().setFromObject(rightBoard).min.x).toBeCloseTo(rightSteps.max.x, 5);
   });
 
+  it('adds one shared-post railing bay toward the center on both front sides', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const frontRails = group.children.filter(
+      (child) => child.userData.kind === 'platform-balustrade' && child.userData.side === 'front',
+    );
+    const extensions = group.children.filter(
+      (child) => child.userData.kind === 'front-center-extension',
+    );
+
+    expect(extensions).toHaveLength(2);
+
+    const boardFor = (rail: typeof extensions[number]) => rail.children.find(
+      (child) => child.userData.kind === 'platform-balustrade-board',
+    )!;
+    const leftRail = frontRails.find((rail) => boardFor(rail).position.x < 0)!;
+    const rightRail = frontRails.find((rail) => boardFor(rail).position.x > 0)!;
+    const leftExtension = extensions.find((rail) => boardFor(rail).position.x < 0)!;
+    const rightExtension = extensions.find((rail) => boardFor(rail).position.x > 0)!;
+    const leftRailBounds = new Box3().setFromObject(boardFor(leftRail));
+    const rightRailBounds = new Box3().setFromObject(boardFor(rightRail));
+    const leftExtensionBounds = new Box3().setFromObject(boardFor(leftExtension));
+    const rightExtensionBounds = new Box3().setFromObject(boardFor(rightExtension));
+
+    extensions.forEach((extension) => {
+      expect(extension.children.filter(
+        (child) => child.userData.kind === 'platform-balustrade-board',
+      )).toHaveLength(1);
+      expect(extension.children.filter(
+        (child) => child.userData.kind === 'platform-balustrade-post',
+      )).toHaveLength(1);
+    });
+    expect(leftExtensionBounds.min.x).toBeCloseTo(leftRailBounds.max.x, 5);
+    expect(rightExtensionBounds.max.x).toBeCloseTo(rightRailBounds.min.x, 5);
+    expect(leftExtensionBounds.max.x).toBeCloseTo(-rightExtensionBounds.min.x, 5);
+    expect(leftExtensionBounds.max.x).toBeGreaterThan(leftRailBounds.max.x);
+    expect(rightExtensionBounds.min.x).toBeLessThan(rightRailBounds.min.x);
+  });
+
   it('stacks the stone cap above the upper brick layer without overlap', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const { group } = createFoundations(DENING_HALL, materials);
