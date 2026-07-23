@@ -44,9 +44,7 @@ describe('hip ridge alignment', () => {
     expect(diamond!.userData.instanceCount).toBeGreaterThan(20);
     expect(diamond!.userData.maskRatioHalf).toBe(0.21);
     const diamondPatch = upper.getObjectByName('二层中央菱形绿瓦底');
-    expect(diamondPatch).toBeDefined();
-    expect(diamondPatch!.userData.kind).toBe('green-diamond-tile-bed');
-    expect(diamondPatch!.userData.ratioHalf).toBe(0.18);
+    expect(diamondPatch).toBeUndefined();
   });
 
   it('keeps every diagonal ridge sample seated on the roof tiles', () => {

@@ -267,30 +267,6 @@ function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
   return centredT + centredX <= 1;
 }
 
-function createGreenDiamondPatch(
-  dimensions: RoofDimensions,
-  material: MeshStandardMaterial,
-): Mesh {
-  const vertices = [
-    roofPointAt(dimensions, 'front', 0, 0.68, 0.045),
-    roofPointAt(dimensions, 'front', -0.18, 0.46, 0.045),
-    roofPointAt(dimensions, 'front', 0, 0.24, 0.045),
-    roofPointAt(dimensions, 'front', 0.18, 0.46, 0.045),
-  ];
-  const geometry = new BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new Float32BufferAttribute(vertices.flatMap(({ x, y, z }) => [x, y, z]), 3),
-  );
-  geometry.setIndex([0, 1, 2, 0, 2, 3]);
-  geometry.computeVertexNormals();
-  const patch = new Mesh(geometry, material);
-  patch.name = '二层中央菱形绿瓦底';
-  patch.userData.kind = 'green-diamond-tile-bed';
-  patch.userData.ratioHalf = 0.18;
-  return patch;
-}
-
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
   const count = quality === 'high' ? 54 : quality === 'medium' ? 38 : 24;
   const profileSegments = quality === 'low' ? 8 : 12;
@@ -589,7 +565,6 @@ function createRoofLevel(
   const yellowPlacements = greenDiamond ? placements.filter((placement) => !isGreenDiamond(placement)) : placements;
   group.add(createInstancedTiles(yellowPlacements, materials.tile, '坡面筒瓦覆盖', 'roof-tile-covering'));
   if (greenDiamond) {
-    group.add(createGreenDiamondPatch(dimensions, materials.diamondTile));
     const greenPlacements = placements.filter(isGreenDiamond);
     const diamond = createInstancedTiles(
       greenPlacements,
