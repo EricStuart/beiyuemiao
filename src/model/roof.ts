@@ -2,6 +2,7 @@ import {
   BoxGeometry,
   BufferGeometry,
   CatmullRomCurve3,
+  Color,
   ConeGeometry,
   CylinderGeometry,
   ExtrudeGeometry,
@@ -149,6 +150,7 @@ interface TilePlacement {
   normal: Vector3;
   side: RoofSide;
   ratio: number;
+  row: number;
   t: number;
   length: number;
 }
@@ -213,6 +215,7 @@ function collectTilePlacements(
           normal,
           side,
           ratio,
+          row,
           t,
           length: start.distanceTo(end) * 0.96,
         });
@@ -227,6 +230,7 @@ function createInstancedTiles(
   material: MeshStandardMaterial,
   name: string,
   kind: string,
+  outerEaveColor?: Color,
 ): InstancedMesh {
   const geometry = new CylinderGeometry(0.14, 0.16, 1, 6, 1, true, 0, Math.PI);
   const mesh = new InstancedMesh(geometry, material, placements.length);
@@ -247,8 +251,16 @@ function createInstancedTiles(
     scale.set(1, placement.length, 1);
     matrix.compose(placement.position, quaternion, scale);
     mesh.setMatrixAt(index, matrix);
-    const shade = index % 3 === 0 ? 0.93 : index % 3 === 1 ? 1 : 1.05;
-    mesh.setColorAt(index, base.clone().multiplyScalar(shade));
+    if (placement.row === 0 && outerEaveColor) {
+      const tint = outerEaveColor.clone();
+      tint.r /= Math.max(base.r, 0.000001);
+      tint.g /= Math.max(base.g, 0.000001);
+      tint.b /= Math.max(base.b, 0.000001);
+      mesh.setColorAt(index, tint);
+    } else {
+      const shade = index % 3 === 0 ? 0.93 : index % 3 === 1 ? 1 : 1.05;
+      mesh.setColorAt(index, base.clone().multiplyScalar(shade));
+    }
   });
   mesh.name = name;
   mesh.userData.kind = kind;
@@ -256,6 +268,10 @@ function createInstancedTiles(
   mesh.userData.surfaceOffset = 0.08;
   mesh.userData.tileOrientationMode = 'surface-normal';
   mesh.userData.tileOpeningDirection = 'toward-roof-surface';
+  if (outerEaveColor) {
+    mesh.userData.eaveGreenInstanceCount = placements.filter(({ row }) => row === 0).length;
+    mesh.userData.eaveGreenColor = outerEaveColor.getHex();
+  }
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.computeBoundingBox();
@@ -268,32 +284,6 @@ function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
   const centredT = Math.abs(t - 0.46) / 0.26;
   const centredX = Math.abs(ratio) / 0.21;
   return centredT + centredX <= 1;
-}
-
-function createEaveGreenOutline(
-  dimensions: RoofDimensions,
-  material: Material,
-): Group {
-  const outline = new Group();
-  outline.name = `${dimensions.name}檐口绿色描边`;
-  outline.userData.kind = 'eave-green-outline';
-
-  (['front', 'back', 'left', 'right'] as const).forEach((side) => {
-    const points = Array.from({ length: 25 }, (_, index) => (
-      roofPointAt(dimensions, side, -1 + index / 12, 0, 0.12)
-    ));
-    const curve = new CatmullRomCurve3(points, false, 'centripetal');
-    const edge = new Mesh(
-      new TubeGeometry(curve, 48, 0.16, 8, false),
-      material,
-    );
-    edge.name = `${dimensions.name}檐口绿边-${side}`;
-    edge.userData.kind = 'eave-green-outline-edge';
-    edge.userData.side = side;
-    outline.add(edge);
-  });
-
-  return outline;
 }
 
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
@@ -599,7 +589,13 @@ function createRoofLevel(
     { front: 0, back: 0, left: 0, right: 0 },
   );
   const yellowPlacements = greenDiamond ? placements.filter((placement) => !isGreenDiamond(placement)) : placements;
-  group.add(createInstancedTiles(yellowPlacements, materials.tile, '坡面筒瓦覆盖', 'roof-tile-covering'));
+  group.add(createInstancedTiles(
+    yellowPlacements,
+    materials.tile,
+    '坡面筒瓦覆盖',
+    'roof-tile-covering',
+    materials.glazedGreen.color,
+  ));
   if (greenDiamond) {
     const greenPlacements = placements.filter(isGreenDiamond);
     const diamond = createInstancedTiles(
@@ -613,7 +609,6 @@ function createRoofLevel(
     group.add(diamond);
   }
   group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
-  group.add(createEaveGreenOutline(dimensions, materials.glazedGreen));
 
   addRidges(group, dimensions, materials);
   return group;

@@ -1,4 +1,4 @@
-import { Box3, CylinderGeometry, Mesh, Object3D, Vector3 } from 'three';
+import { Box3, Color, CylinderGeometry, InstancedMesh, Mesh, Object3D, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
@@ -50,26 +50,27 @@ describe('hip ridge alignment', () => {
     });
   });
 
-  it('outlines all four outer eaves on both roof levels with the ridge green', () => {
+  it('recolors the outermost row in the existing tile mesh without outline objects', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const roofs = createRoofs(DENING_HALL, materials, 'high');
 
     roofs.children.forEach((roof) => {
-      const outline = roof.children.find(
+      const outlineObjects = roof.children.filter(
         (child) => child.userData.kind === 'eave-green-outline',
       );
-      expect(outline).toBeDefined();
-      expect(outline!.children).toHaveLength(4);
-      expect(outline!.children.map((child) => child.userData.side)).toEqual([
-        'front',
-        'back',
-        'left',
-        'right',
-      ]);
-      outline!.children.forEach((edge) => {
-        expect(edge).toBeInstanceOf(Mesh);
-        expect((edge as Mesh).material).toBe(materials.glazedGreen);
-      });
+      expect(outlineObjects).toHaveLength(0);
+
+      const covering = roof.children.find(
+        (child) => child.userData.kind === 'roof-tile-covering',
+      );
+      expect(covering).toBeInstanceOf(InstancedMesh);
+      expect(covering!.userData.eaveGreenInstanceCount).toBe(118);
+      expect(covering!.userData.eaveGreenColor).toBe(0x255942);
+
+      const instanceTint = new Color();
+      (covering as InstancedMesh).getColorAt(0, instanceTint);
+      const renderedColor = instanceTint.multiply(materials.tile.color);
+      expect(renderedColor.getHex()).toBe(materials.glazedGreen.color.getHex());
     });
   });
 

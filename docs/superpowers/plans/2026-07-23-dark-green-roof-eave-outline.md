@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give both roof levels dark-green base slopes, dark-yellow tiles, and glazed-green outlines around every outer eave.
+**Goal:** Give both roof levels dark-green base slopes, dark-yellow tiles, and ridge-green outermost tile rows around every eave.
 
-**Architecture:** Add one dedicated roof-surface material so the base plane can be colored independently from tile instances. Build four sampled `TubeGeometry` eave trims per roof level from the existing roof profile and reuse the glazed ridge material.
+**Architecture:** Add one dedicated roof-surface material so the base plane can be colored independently from tile instances. Keep the existing tile `InstancedMesh` objects and recolor only their row-zero instances with a compensated instance tint that renders as the glazed ridge green.
 
 **Tech Stack:** TypeScript, Three.js, Vitest, Vite
 
@@ -22,16 +22,16 @@
 - [ ] Pass `materials.roofSurface` to `createRoofSurface`.
 - [ ] Re-run the focused test and confirm it passes.
 
-### Task 2: Add four fitted eave outlines per roof
+### Task 2: Recolor the existing outermost tile row
 
 **Files:**
 - Modify: `src/model/roof.ts`
 - Test: `src/model/roof.test.ts`
 
-- [ ] Add a failing test expecting both roof levels to contain one `eave-green-outline` group with four children using `materials.glazedGreen`.
-- [ ] Run the focused test and confirm the outline group is missing.
-- [ ] Implement sampled front, back, left, and right eave curves with `CatmullRomCurve3` and `TubeGeometry` at `t = 0`.
-- [ ] Add the outline group to each roof level and attach side metadata for diagnostics.
+- [ ] Add a failing test expecting no `eave-green-outline` objects and 118 ridge-green row-zero instances inside each existing roof tile mesh.
+- [ ] Run the focused test and confirm the old outline object is still present.
+- [ ] Store the source row on every tile placement and apply a compensated ridge-green instance tint when `row === 0`.
+- [ ] Remove the separate eave outline group and its geometry factory.
 - [ ] Re-run the focused test and confirm it passes.
 
 ### Task 3: Verify the complete result
