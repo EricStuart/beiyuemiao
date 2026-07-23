@@ -34,8 +34,8 @@ export function evaluateNaturalLightCycle(elapsedMs: number): NaturalLightState 
       y: 60 + frontness * 2,
       z: Math.sin(angle) * 62,
     },
-    intensity: 3.65 + frontness * 0.25,
-    fillIntensity: 2.35 + frontness * 0.15,
+    intensity: 3.05 + frontness * 0.25,
+    fillIntensity: 1.65 + frontness * 0.2,
     color: mixHex(0xffdfb0, 0xfff3d8, frontness),
   };
 }

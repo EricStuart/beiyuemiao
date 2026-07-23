@@ -10,6 +10,7 @@ describe('high quality render settings', () => {
       pixelRatio: 3.5,
       shadowMapSize: 2048,
       shadowMapType: PCFSoftShadowMap,
+      shadowNormalBias: 0.035,
     });
   });
 

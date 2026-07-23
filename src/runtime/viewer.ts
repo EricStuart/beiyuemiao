@@ -102,11 +102,12 @@ export class DeningHallViewer {
     this.doorAnimation = new DoorAnimationController(this.building.doors);
     this.scene.add(this.building.root);
 
-    this.fillLight = new HemisphereLight(0xd8e8e2, 0x5d5848, 2.25);
-    this.sunnyLight = new DirectionalLight(0xfff0d1, 3.6);
-    this.sunnyLight.position.set(-42, 66, 48);
+    this.fillLight = new HemisphereLight(0xd8e8e2, 0x5d5848, 1.85);
+    this.sunnyLight = new DirectionalLight(0xfff0d1, 3.3);
+    this.sunnyLight.position.set(0, 62, 62);
     this.sunnyLight.castShadow = renderSettings.shadows;
     this.sunnyLight.shadow.mapSize.set(renderSettings.shadowMapSize, renderSettings.shadowMapSize);
+    this.sunnyLight.shadow.normalBias = renderSettings.shadowNormalBias;
     this.sunnyLight.shadow.camera.left = -62;
     this.sunnyLight.shadow.camera.right = 62;
     this.sunnyLight.shadow.camera.top = 55;
@@ -131,7 +132,7 @@ export class DeningHallViewer {
       triangles: 0,
       canvasVariance: 0,
       sunPhase: 0,
-      sunPosition: { x: -42, y: 66, z: 48 },
+      sunPosition: { x: 0, y: 62, z: 62 },
     };
     window.__DENING_DIAGNOSTICS__ = this.diagnostics;
     this.resize();

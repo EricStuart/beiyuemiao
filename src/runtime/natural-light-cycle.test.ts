@@ -24,9 +24,10 @@ describe('natural light cycle', () => {
       expect(sample.position.z).toBeGreaterThan(50);
       expect(frontalAngle).toBeLessThanOrEqual((Math.PI * 25) / 180 + 1e-6);
       expect(sample.position.y).toBeGreaterThanOrEqual(60);
-      expect(sample.intensity).toBeGreaterThanOrEqual(3.65);
-      expect(sample.intensity).toBeLessThanOrEqual(3.9);
-      expect(sample.fillIntensity).toBeGreaterThanOrEqual(2.35);
+      expect(sample.intensity).toBeGreaterThanOrEqual(3.05);
+      expect(sample.intensity).toBeLessThanOrEqual(3.3);
+      expect(sample.fillIntensity).toBeGreaterThanOrEqual(1.65);
+      expect(sample.fillIntensity).toBeLessThanOrEqual(1.85);
     });
   });
 
