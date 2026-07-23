@@ -1,4 +1,4 @@
-import { Box3, BoxGeometry, Color, CylinderGeometry, InstancedMesh, Mesh, Object3D, Vector3 } from 'three';
+import { Box3, BoxGeometry, Color, CylinderGeometry, InstancedMesh, LineSegments, Mesh, Object3D, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
@@ -14,14 +14,16 @@ describe('hip ridge alignment', () => {
   it('uses gray roof surfaces and tiles with green diamond tiles and glazed ridges', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     expect(materials.roofSurface.color.getHex()).toBe(0x4f534f);
-    expect(materials.tile.color.getHex()).toBe(0x74736c);
+    expect(materials.tile.color.getHex()).toBe(0x44443f);
     expect(materials.tileRib.color.getHex()).toBe(0x565852);
     expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
     expect(materials.glazedGreen.color.getHex()).toBe(0x255942);
     expect(materials.yellowGlaze.color.getHex()).toBe(0xb08d3e);
     const roofHsl = materials.roofSurface.color.getHSL({ h: 0, s: 0, l: 0 });
+    const tileHsl = materials.tile.color.getHSL({ h: 0, s: 0, l: 0 });
     const ridgeHsl = materials.glazedGreen.color.getHSL({ h: 0, s: 0, l: 0 });
     expect(roofHsl.s).toBeLessThan(0.06);
+    expect(tileHsl.l).toBeLessThan(roofHsl.l);
     expect(ridgeHsl.s).toBeGreaterThan(roofHsl.s);
     expect(materials.tile.roughness).toBeGreaterThan(0.85);
     expect(materials.tile.vertexColors).toBe(false);
@@ -38,6 +40,14 @@ describe('hip ridge alignment', () => {
       expect(covering!.userData.surfaceOffset).toBeGreaterThanOrEqual(0.07);
       expect(covering!.userData.tileOrientationMode).toBe('surface-normal');
       expect(covering!.userData.tileOpeningDirection).toBe('toward-roof-surface');
+    });
+  });
+
+  it('does not draw auxiliary lines across either roof slope', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+
+    roofs.children.forEach((roof) => {
+      expect(roof.children.some((child) => child instanceof LineSegments)).toBe(false);
     });
   });
 

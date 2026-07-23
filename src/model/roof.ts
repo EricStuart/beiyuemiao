@@ -9,8 +9,6 @@ import {
   Float32BufferAttribute,
   Group,
   InstancedMesh,
-  LineBasicMaterial,
-  LineSegments,
   Matrix4,
   Mesh,
   MeshStandardMaterial,
@@ -23,7 +21,7 @@ import {
 } from 'three';
 import type { BuildingData } from '../data/building';
 import type { BuildingMaterials } from './materials';
-import { evaluateRaisedEaveHeight, evaluateWingLift, sampleRaisedEaveProfile } from './roof-profile';
+import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 import type { QualityLevel } from './types';
 
 export interface RoofDimensions {
@@ -326,54 +324,6 @@ function isGreenDiamond(placement: TilePlacement): boolean {
   if (localRow < 0 || localRow >= DIAMOND_ROW_HALF_WIDTHS.length) return false;
   const centerColumn = placement.columnCount / 2;
   return Math.abs(placement.column - centerColumn) <= DIAMOND_ROW_HALF_WIDTHS[localRow]!;
-}
-
-function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
-  const count = quality === 'high' ? 54 : quality === 'medium' ? 38 : 24;
-  const profileSegments = quality === 'low' ? 8 : 12;
-  const points = sampleRaisedEaveProfile(
-    {
-      run: dimensions.depth / 2,
-      rise: dimensions.ridgeY - dimensions.baseY,
-      eaveLift: dimensions.eaveLift,
-    },
-    profileSegments,
-  );
-  const positions: number[] = [];
-  const halfWidth = dimensions.width / 2;
-  const halfDepth = dimensions.depth / 2;
-  const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
-  const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
-  for (const face of [-1, 1]) {
-    for (let index = 0; index <= count; index += 1) {
-      const ratio = -1 + (2 * index) / count;
-      for (let segment = 0; segment < points.length - 1; segment += 1) {
-        const current = points[segment];
-        const next = points[segment + 1];
-        if (!current || !next) continue;
-        const t1 = current.x / (dimensions.depth / 2);
-        const t2 = next.x / (dimensions.depth / 2);
-        const extentX1 = halfWidth + (topHalfWidth - halfWidth) * t1;
-        const extentX2 = halfWidth + (topHalfWidth - halfWidth) * t2;
-        const extentZ1 = halfDepth + (topHalfDepth - halfDepth) * t1;
-        const extentZ2 = halfDepth + (topHalfDepth - halfDepth) * t2;
-        positions.push(
-          ratio * extentX1,
-          dimensions.baseY + current.y + evaluateWingLift(ratio, t1) + 0.05,
-          face * extentZ1,
-          ratio * extentX2,
-          dimensions.baseY + next.y + evaluateWingLift(ratio, t2) + 0.05,
-          face * extentZ2,
-        );
-      }
-    }
-  }
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-  return new LineSegments(
-    geometry,
-    new LineBasicMaterial({ color, transparent: true, opacity: 0.72 }),
-  );
 }
 
 function createRidgeTube(points: Vector3[], radius: number, material: Material): Mesh {
@@ -731,8 +681,6 @@ function createRoofLevel(
     diamond.userData.rowHalfWidths = [...DIAMOND_ROW_HALF_WIDTHS];
     group.add(diamond);
   }
-  group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
-
   addRidges(group, dimensions, materials);
   return group;
 }
