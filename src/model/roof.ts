@@ -270,6 +270,32 @@ function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
   return centredT + centredX <= 1;
 }
 
+function createEaveGreenOutline(
+  dimensions: RoofDimensions,
+  material: Material,
+): Group {
+  const outline = new Group();
+  outline.name = `${dimensions.name}檐口绿色描边`;
+  outline.userData.kind = 'eave-green-outline';
+
+  (['front', 'back', 'left', 'right'] as const).forEach((side) => {
+    const points = Array.from({ length: 25 }, (_, index) => (
+      roofPointAt(dimensions, side, -1 + index / 12, 0, 0.12)
+    ));
+    const curve = new CatmullRomCurve3(points, false, 'centripetal');
+    const edge = new Mesh(
+      new TubeGeometry(curve, 48, 0.16, 8, false),
+      material,
+    );
+    edge.name = `${dimensions.name}檐口绿边-${side}`;
+    edge.userData.kind = 'eave-green-outline-edge';
+    edge.userData.side = side;
+    outline.add(edge);
+  });
+
+  return outline;
+}
+
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
   const count = quality === 'high' ? 54 : quality === 'medium' ? 38 : 24;
   const profileSegments = quality === 'low' ? 8 : 12;
@@ -587,6 +613,7 @@ function createRoofLevel(
     group.add(diamond);
   }
   group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
+  group.add(createEaveGreenOutline(dimensions, materials.glazedGreen));
 
   addRidges(group, dimensions, materials);
   return group;

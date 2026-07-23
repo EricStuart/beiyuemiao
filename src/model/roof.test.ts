@@ -50,6 +50,29 @@ describe('hip ridge alignment', () => {
     });
   });
 
+  it('outlines all four outer eaves on both roof levels with the ridge green', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const roofs = createRoofs(DENING_HALL, materials, 'high');
+
+    roofs.children.forEach((roof) => {
+      const outline = roof.children.find(
+        (child) => child.userData.kind === 'eave-green-outline',
+      );
+      expect(outline).toBeDefined();
+      expect(outline!.children).toHaveLength(4);
+      expect(outline!.children.map((child) => child.userData.side)).toEqual([
+        'front',
+        'back',
+        'left',
+        'right',
+      ]);
+      outline!.children.forEach((edge) => {
+        expect(edge).toBeInstanceOf(Mesh);
+        expect((edge as Mesh).material).toBe(materials.glazedGreen);
+      });
+    });
+  });
+
   it('places one muted green diamond on the centre of the upper front slope', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children[1]!;
