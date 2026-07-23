@@ -14,22 +14,35 @@ describe('natural light cycle', () => {
     expect(end.color).toBe(start.color);
   });
 
-  it('keeps the moving sun above the horizon throughout the cycle', () => {
-    const samples = Array.from({ length: 16 }, (_, index) => (
-      evaluateNaturalLightCycle((NATURAL_LIGHT_CYCLE_MS * index) / 16)
+  it('keeps every sample inside the bright frontal arc', () => {
+    const samples = Array.from({ length: 32 }, (_, index) => (
+      evaluateNaturalLightCycle((NATURAL_LIGHT_CYCLE_MS * index) / 32)
     ));
 
-    expect(samples.every((sample) => sample.position.y >= 42)).toBe(true);
+    samples.forEach((sample) => {
+      const frontalAngle = Math.abs(Math.atan2(sample.position.x, sample.position.z));
+      expect(sample.position.z).toBeGreaterThan(50);
+      expect(frontalAngle).toBeLessThanOrEqual((Math.PI * 25) / 180 + 1e-6);
+      expect(sample.position.y).toBeGreaterThanOrEqual(60);
+      expect(sample.intensity).toBeGreaterThanOrEqual(3.65);
+      expect(sample.intensity).toBeLessThanOrEqual(3.9);
+      expect(sample.fillIntensity).toBeGreaterThanOrEqual(2.35);
+    });
   });
 
-  it('changes sun direction, intensity, fill light, and color over time', () => {
-    const start = evaluateNaturalLightCycle(0);
+  it('moves from the bright center to both frontal sides and back', () => {
+    const center = evaluateNaturalLightCycle(0);
     const quarter = evaluateNaturalLightCycle(NATURAL_LIGHT_CYCLE_MS / 4);
+    const half = evaluateNaturalLightCycle(NATURAL_LIGHT_CYCLE_MS / 2);
+    const threeQuarter = evaluateNaturalLightCycle((NATURAL_LIGHT_CYCLE_MS * 3) / 4);
 
-    expect(quarter.position.x).not.toBeCloseTo(start.position.x, 3);
-    expect(quarter.position.z).not.toBeCloseTo(start.position.z, 3);
-    expect(quarter.intensity).toBeGreaterThan(start.intensity);
-    expect(quarter.fillIntensity).toBeGreaterThan(start.fillIntensity);
-    expect(quarter.color).not.toBe(start.color);
+    expect(center.position.x).toBeCloseTo(0, 5);
+    expect(quarter.position.x).toBeLessThan(0);
+    expect(threeQuarter.position.x).toBeGreaterThan(0);
+    expect(half.position.x).toBeCloseTo(center.position.x, 5);
+    expect(half.position.z).toBeCloseTo(center.position.z, 5);
+    expect(center.intensity).toBeGreaterThan(quarter.intensity);
+    expect(center.fillIntensity).toBeGreaterThan(quarter.fillIntensity);
+    expect(center.color).not.toBe(quarter.color);
   });
 });

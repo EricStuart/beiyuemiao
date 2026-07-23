@@ -23,18 +23,19 @@ export function evaluateNaturalLightCycle(elapsedMs: number): NaturalLightState 
   const wrapped = ((elapsedMs % NATURAL_LIGHT_CYCLE_MS) + NATURAL_LIGHT_CYCLE_MS)
     % NATURAL_LIGHT_CYCLE_MS;
   const phase = wrapped / NATURAL_LIGHT_CYCLE_MS;
-  const angle = phase * Math.PI * 2;
-  const daylight = 0.5 + Math.sin(angle) * 0.5;
+  const lateral = Math.sin(phase * Math.PI * 2);
+  const angle = Math.PI / 2 + lateral * ((Math.PI * 25) / 180);
+  const frontness = Math.cos(lateral * Math.PI / 2);
 
   return {
     phase,
     position: {
-      x: Math.cos(angle) * 72,
-      y: 42 + daylight * 20,
-      z: Math.sin(angle) * 58,
+      x: Math.cos(angle) * 62,
+      y: 60 + frontness * 2,
+      z: Math.sin(angle) * 62,
     },
-    intensity: 3 + daylight * 0.9,
-    fillIntensity: 2.05 + daylight * 0.45,
-    color: mixHex(0xffd6a0, 0xfff3d8, daylight),
+    intensity: 3.65 + frontness * 0.25,
+    fillIntensity: 2.35 + frontness * 0.15,
+    color: mixHex(0xffdfb0, 0xfff3d8, frontness),
   };
 }
