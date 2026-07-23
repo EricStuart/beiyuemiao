@@ -30,6 +30,7 @@ function addStraightBalustrade(
   platformTop: number,
   material: Material,
   railKind = 'platform-balustrade',
+  omitStartPost = false,
 ): void {
   if (length <= 0.1) return;
   const railGroup = new Group();
@@ -49,7 +50,7 @@ function addStraightBalustrade(
   railGroup.add(panel);
 
   const postCount = Math.max(2, Math.ceil(length / 4));
-  for (let index = 0; index <= postCount; index += 1) {
+  for (let index = omitStartPost ? 1 : 0; index <= postCount; index += 1) {
     const ratio = index / postCount;
     const post = new Mesh(new CylinderGeometry(0.2, 0.25, 1.35, 8), material);
     post.position.set(
@@ -57,6 +58,7 @@ function addStraightBalustrade(
       platformTop + 0.62,
       orientation === 'z' ? z - length / 2 + length * ratio : z,
     );
+    post.userData.kind = 'platform-balustrade-post';
     railGroup.add(post);
   }
   root.add(railGroup);
@@ -82,6 +84,7 @@ function addStairBalustrade(
   const rail = box(0.34, 0.3, direction.length(), material);
   rail.position.copy(low).add(high).multiplyScalar(0.5);
   rail.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), direction.clone().normalize());
+  rail.userData.kind = 'stair-balustrade-board';
   railGroup.add(rail);
 
   for (let index = 0; index <= 5; index += 1) {
@@ -89,8 +92,13 @@ function addStairBalustrade(
     const post = new Mesh(new CylinderGeometry(0.2, 0.26, 1.3, 8), material);
     post.position.lerpVectors(low, high, ratio);
     post.position.y = groundY + (platformTop - groundY) * ratio + 0.62;
+    post.userData.kind = 'stair-balustrade-post';
+    if (index === 0) post.userData.endpoint = 'low';
+    if (index === 5) post.userData.endpoint = 'high';
     railGroup.add(post);
   }
+  railGroup.userData.low = low.toArray();
+  railGroup.userData.high = high.toArray();
   root.add(railGroup);
 }
 
@@ -111,25 +119,17 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   ground.name = '院落地面';
   group.add(ground);
 
-  const lowerHeight = 0.75;
-  const lower = box(width + 2.4, lowerHeight, depth + 2.4, materials.brick);
-  lower.position.y = groundY + lowerHeight / 2;
-  const middleHeight = 0.65;
-  const middleBottom = groundY + lowerHeight;
-  const middle = box(width + 1.1, middleHeight, depth + 1.1, materials.stone);
-  middle.position.y = middleBottom + middleHeight / 2;
   const capHeight = 0.18;
-  const upperBottom = middleBottom + middleHeight;
   const upperTop = data.platformHeight - capHeight;
-  const upper = box(width, upperTop - upperBottom, depth, materials.brick);
-  upper.position.y = (upperBottom + upperTop) / 2;
-  upper.name = '主体台基';
-  upper.userData.kind = 'platform-wall';
+  const platformWall = box(width, upperTop - groundY, depth, materials.brick);
+  platformWall.position.y = (groundY + upperTop) / 2;
+  platformWall.name = '主体台基';
+  platformWall.userData.kind = 'platform-wall';
   const cap = box(width + 0.35, capHeight, depth + 0.35, materials.stone);
   cap.position.y = upperTop + capHeight / 2;
   cap.name = '主体台基顶面';
   cap.userData.kind = 'platform-main';
-  group.add(lower, middle, upper, cap);
+  group.add(platformWall, cap);
   const mainPaving = box(width - 0.6, 0.08, depth - 0.6, materials.paving);
   mainPaving.position.y = data.platformHeight + 0.04;
   mainPaving.name = '主台基灰砖铺地';
@@ -146,15 +146,13 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   const terraceWall = box(terraceWidth, upperTop - groundY, terraceDepth, materials.brick);
   terraceWall.userData.kind = 'terrace-wall';
   terraceWall.position.set(0, (groundY + upperTop) / 2, terraceCenterZ);
-  const terraceBand = box(terraceWidth + 0.45, 0.28, terraceDepth + 0.45, materials.stone);
-  terraceBand.position.set(0, groundY + 0.9, terraceCenterZ);
   const terraceCap = box(terraceWidth + 0.3, capHeight, terraceDepth + 0.3, materials.stone);
   terraceCap.position.set(0, upperTop + capHeight / 2, terraceCenterZ);
   const terracePaving = box(terraceWidth - 0.3, 0.08, terraceDepth - 0.3, materials.paving);
   terracePaving.position.set(0, data.platformHeight + 0.04, terraceCenterZ);
   terracePaving.name = '月台灰砖铺地';
   terracePaving.userData.kind = 'terrace-paving';
-  terrace.add(terraceWall, terraceBand, terraceCap, terracePaving);
+  terrace.add(terraceWall, terraceCap, terracePaving);
   group.add(terrace);
 
   const stairWidth = 6.4;
@@ -180,6 +178,7 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   const sideFlightLength = 4.8;
   const sideStepRun = sideFlightLength / stepCount;
   const sideStairZ = frontEdge + sideStairWidth / 2;
+  const sideRailZ = sideStairZ + sideStairWidth / 2 - 0.28;
   for (const side of [-1, 1]) {
     const sideName = side < 0 ? 'left' : 'right';
     for (let index = 0; index < stepCount; index += 1) {
@@ -202,30 +201,18 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   const mainFrontZ = (depth + 0.35) / 2;
   const mainRearZ = -mainFrontZ;
   const terraceHalf = terraceWidth / 2;
-  const mainFrontSegment = mainEdgeX - terraceHalf - sideFlightLength - 0.35;
+  const sideFlightOuterX = terraceHalf + sideFlightLength;
+  const mainFrontSegment = mainEdgeX - sideFlightOuterX;
   for (const side of [-1, 1]) {
     addStraightBalustrade(
       group,
       'front',
       'x',
       mainFrontSegment,
-      side * (terraceHalf + sideFlightLength + 0.35 + mainFrontSegment / 2),
+      side * (sideFlightOuterX + mainFrontSegment / 2),
       mainFrontZ,
       data.platformHeight,
       materials.stone,
-    );
-  }
-  for (const side of [-1, 1]) {
-    addStraightBalustrade(
-      group,
-      side < 0 ? 'left-near-stair' : 'right-near-stair',
-      'x',
-      0.35,
-      side * (terraceHalf + sideFlightLength + 0.175),
-      mainFrontZ,
-      data.platformHeight,
-      materials.stone,
-      'platform-balustrade-gap',
     );
   }
   addStraightBalustrade(group, 'rear', 'x', width + 0.35, 0, mainRearZ, data.platformHeight, materials.stone);
@@ -245,15 +232,15 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
       materials.stone,
     );
   }
-  const terraceSideRailLength = terraceDepth - 4;
-  const terraceSideRailZ = frontEdge + 4 + terraceSideRailLength / 2;
-  addStraightBalustrade(group, 'terrace-left', 'z', terraceSideRailLength, -terraceHalf - 0.15, terraceSideRailZ, data.platformHeight, materials.stone);
-  addStraightBalustrade(group, 'terrace-right', 'z', terraceSideRailLength, terraceHalf + 0.15, terraceSideRailZ, data.platformHeight, materials.stone);
+  const terraceSideRailLength = terraceFront - sideRailZ;
+  const terraceSideRailZ = sideRailZ + terraceSideRailLength / 2;
+  addStraightBalustrade(group, 'terrace-left', 'z', terraceSideRailLength, -terraceHalf - 0.15, terraceSideRailZ, data.platformHeight, materials.stone, 'platform-balustrade', true);
+  addStraightBalustrade(group, 'terrace-right', 'z', terraceSideRailLength, terraceHalf + 0.15, terraceSideRailZ, data.platformHeight, materials.stone, 'platform-balustrade', true);
 
   const frontRailLowZ = terraceFront + stepCount * stepDepth - 0.2;
   const frontRailHighZ = terraceFront + 0.25;
   for (const side of [-1, 1]) {
-    const x = side * (stairWidth / 2 + 0.35);
+    const x = side * (stairWidth / 2 - 0.28);
     addStairBalustrade(
       group,
       'front',
@@ -268,15 +255,14 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
 
   for (const side of [-1, 1]) {
     const stairSide = side < 0 ? 'left' : 'right';
-    const highX = side * (terraceHalf + 0.25);
-    const lowX = side * (terraceHalf + sideFlightLength - 0.25);
-    const outerZ = mainFrontZ + sideStairWidth - 0.22;
+    const highX = side * (terraceHalf + 0.15);
+    const lowX = side * (terraceHalf + sideFlightLength - 0.28);
     addStairBalustrade(
       group,
       stairSide,
       1,
-      new Vector3(lowX, groundY + 0.62, outerZ),
-      new Vector3(highX, data.platformHeight + 0.62, outerZ),
+      new Vector3(lowX, groundY + 0.62, sideRailZ),
+      new Vector3(highX, data.platformHeight + 0.62, sideRailZ),
       groundY,
       data.platformHeight,
       materials.stone,
@@ -285,6 +271,6 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
 
   return {
     group,
-    collisions: [new Box3().setFromObject(lower), new Box3().setFromObject(upper)],
+    collisions: [new Box3().setFromObject(platformWall)],
   };
 }

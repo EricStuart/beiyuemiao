@@ -26,7 +26,7 @@ describe('platform layer geometry', () => {
     expect(new Box3().setFromObject(terracePaving).max.y).toBeGreaterThan(DENING_HALL.platformHeight);
   });
 
-  it('drops platform railing boards to the platform surface and fills both stair-adjacent gaps', () => {
+  it('drops platform railing boards to the platform surface without duplicate stair-gap rails', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const { group } = createFoundations(DENING_HALL, materials);
     const boards: Mesh[] = [];
@@ -42,14 +42,132 @@ describe('platform layer geometry', () => {
     boards.forEach((board) => {
       expect(new Box3().setFromObject(board).min.y).toBeCloseTo(DENING_HALL.platformHeight, 5);
     });
-    expect(nearStairRails).toHaveLength(2);
+    expect(nearStairRails).toHaveLength(0);
+  });
+
+  it('uses one measured vertical main wall without stepped foundation courses', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const ground = group.children.find((child) => child.userData.kind === 'courtyard-ground')!;
+    const mainSolids = group.children.filter((child) => (
+      child instanceof Mesh
+      && (child.userData.kind === 'platform-wall' || child.userData.kind === undefined)
+    ));
+
+    expect(mainSolids).toHaveLength(1);
+    const wallBounds = new Box3().setFromObject(mainSolids[0]!);
+    const wallSize = wallBounds.getSize(new Vector3());
+    expect(wallSize.x).toBeCloseTo(DENING_HALL.platformWidth.value, 5);
+    expect(wallSize.z).toBeCloseTo(DENING_HALL.platformDepth.value, 5);
+    expect(wallBounds.min.y).toBeCloseTo(new Box3().setFromObject(ground).max.y, 5);
+  });
+
+  it('keeps both side stair flights outside every main foundation solid', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const steps = group.children.filter((child) => child.userData.kind === 'platform-step');
+    const foundationBounds = new Box3();
+    group.children
+      .filter((child) => child instanceof Mesh
+        && (child.userData.kind === 'platform-wall' || child.userData.kind === undefined))
+      .forEach((child) => foundationBounds.expandByObject(child));
+
+    (['left', 'right'] as const).forEach((side) => {
+      const flightBounds = new Box3();
+      steps.filter((step) => step.userData.side === side)
+        .forEach((step) => flightBounds.expandByObject(step));
+      expect(flightBounds.min.z).toBeGreaterThanOrEqual(foundationBounds.max.z - 1e-6);
+    });
+  });
+
+  it('seats both front stair balustrades completely over the front steps', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const frontSteps = group.children.filter(
+      (child) => child.userData.kind === 'platform-step' && child.userData.side === 'front',
+    );
+    const frontRails = group.children.filter(
+      (child) => child.userData.kind === 'stair-balustrade'
+        && child.userData.stairSide === 'front',
+    );
+    const stepBounds = new Box3();
+    frontSteps.forEach((step) => stepBounds.expandByObject(step));
+
+    expect(frontRails).toHaveLength(2);
+    frontRails.forEach((rail) => {
+      const bounds = new Box3().setFromObject(rail);
+      expect(bounds.min.x).toBeGreaterThanOrEqual(stepBounds.min.x - 1e-6);
+      expect(bounds.max.x).toBeLessThanOrEqual(stepBounds.max.x + 1e-6);
+    });
+  });
+
+  it('uses one clean outer rail per side stair with complete shared terrace joints', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const sideRails = group.children.filter(
+      (child) => child.userData.kind === 'stair-balustrade'
+        && (child.userData.stairSide === 'left' || child.userData.stairSide === 'right'),
+    );
+
+    expect(sideRails).toHaveLength(2);
+    sideRails.forEach((rail) => {
+      const posts = rail.children.filter((child) => child.userData.kind === 'stair-balustrade-post');
+      const boards = rail.children.filter((child) => child.userData.kind === 'stair-balustrade-board');
+      const highPost = posts.find((post) => post.userData.endpoint === 'high');
+      const terraceSide = rail.userData.stairSide === 'left' ? 'terrace-left' : 'terrace-right';
+      const terraceRail = group.children.find(
+        (child) => child.userData.kind === 'platform-balustrade'
+          && child.userData.side === terraceSide,
+      )!;
+      const terraceBoard = terraceRail.children.find(
+        (child) => child.userData.kind === 'platform-balustrade-board',
+      )!;
+      const terraceBounds = new Box3().setFromObject(terraceBoard);
+
+      expect(boards).toHaveLength(1);
+      expect(posts).toHaveLength(6);
+      expect(highPost).toBeDefined();
+      expect(highPost!.position.x).toBeCloseTo(terraceBoard.position.x, 5);
+      expect(highPost!.position.z).toBeCloseTo(terraceBounds.min.z, 5);
+    });
+  });
+
+  it('extends the main front railing to both side stair edges without a gap', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { group } = createFoundations(DENING_HALL, materials);
+    const frontRails = group.children.filter(
+      (child) => child.userData.kind === 'platform-balustrade' && child.userData.side === 'front',
+    );
+    const sideSteps = group.children.filter(
+      (child) => child.userData.kind === 'platform-step'
+        && (child.userData.side === 'left' || child.userData.side === 'right'),
+    );
+    const leftSteps = new Box3();
+    const rightSteps = new Box3();
+    sideSteps.forEach((step) => (
+      step.userData.side === 'left' ? leftSteps : rightSteps
+    ).expandByObject(step));
+    const railCenterX = (rail: typeof frontRails[number]): number => (
+      rail.children.find((child) => child.userData.kind === 'platform-balustrade-board')!.position.x
+    );
+    const leftRail = frontRails.find((rail) => railCenterX(rail) < 0)!;
+    const rightRail = frontRails.find((rail) => railCenterX(rail) > 0)!;
+
+    const leftBoard = leftRail.children.find(
+      (child) => child.userData.kind === 'platform-balustrade-board',
+    )!;
+    const rightBoard = rightRail.children.find(
+      (child) => child.userData.kind === 'platform-balustrade-board',
+    )!;
+    expect(new Box3().setFromObject(leftBoard).max.x).toBeCloseTo(leftSteps.min.x, 5);
+    expect(new Box3().setFromObject(rightBoard).min.x).toBeCloseTo(rightSteps.max.x, 5);
   });
 
   it('stacks the stone cap above the upper brick layer without overlap', () => {
     const materials = createBuildingMaterials(DENING_HALL);
     const { group } = createFoundations(DENING_HALL, materials);
-    const upperBrick = group.children[3];
-    const stoneCap = group.children[4];
+    const upperBrick = group.children.find((child) => child.userData.kind === 'platform-wall');
+    const stoneCap = group.children.find((child) => child.userData.kind === 'platform-main');
     expect(upperBrick).toBeInstanceOf(Mesh);
     expect(stoneCap).toBeInstanceOf(Mesh);
 
