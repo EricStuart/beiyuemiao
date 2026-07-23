@@ -135,13 +135,29 @@ describe('hip ridge alignment', () => {
       top: 1,
       bottom: 1,
     });
-    expect(diamond!.userData.maskRatioHalf).toBeCloseTo(0.3031578947, 8);
-    expect(diamond!.userData.maskTHalf).toBeCloseTo(3 / 14, 8);
     expect(diamond!.userData.maskCenterT).toBeCloseTo(15 / 28, 8);
-    expect(diamond!.userData.maskExponent).toBe(1.5);
+    expect(diamond!.userData.maskMode).toBe('discrete-grid');
+    expect(diamond!.userData.rowHalfWidths).toEqual([0, 1, 3, 6, 3, 1, 0]);
     const diamondPatch = upper.getObjectByName('二层中央菱形绿瓦底');
     expect(diamondPatch).toBeUndefined();
   });
+
+  it.each(['high', 'medium', 'low'] as const)(
+    'uses the exact diamond row profile at %s quality',
+    (quality) => {
+      const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), quality);
+      const diamond = roofs.children[1]!.getObjectByName('二层中央菱形绿瓦');
+
+      expect(diamond).toBeDefined();
+      expect(diamond!.userData.rowTileCounts).toEqual([1, 3, 7, 13, 7, 3, 1]);
+      expect(diamond!.userData.tipInstanceCounts).toEqual({
+        left: 1,
+        right: 1,
+        top: 1,
+        bottom: 1,
+      });
+    },
+  );
 
   it('keeps every diagonal ridge sample seated on the roof tiles', () => {
     const dimensions: RoofDimensions = {

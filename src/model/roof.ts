@@ -169,8 +169,11 @@ interface TilePlacement {
   tangent: Vector3;
   normal: Vector3;
   side: RoofSide;
+  column: number;
+  columnCount: number;
   ratio: number;
   row: number;
+  rowCount: number;
   t: number;
   length: number;
 }
@@ -234,8 +237,11 @@ function collectTilePlacements(
           tangent,
           normal,
           side,
+          column,
+          columnCount: columns,
           ratio,
           row,
+          rowCount: rows,
           t,
           length: start.distanceTo(end) * 0.96,
         });
@@ -308,17 +314,15 @@ function createInstancedTiles(
 }
 
 const DIAMOND_CENTER_T = 15 / 28;
-const DIAMOND_RATIO_HALF = (1.92 / 38) * 6;
-const DIAMOND_T_HALF = 3 / 14;
-const DIAMOND_MASK_EXPONENT = 1.5;
+const DIAMOND_ROW_HALF_WIDTHS = [0, 1, 3, 6, 3, 1, 0] as const;
 
-function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
-  if (side !== 'front') return false;
-  const vertical = Math.abs(t - DIAMOND_CENTER_T) / DIAMOND_T_HALF;
-  const horizontal = Math.abs(ratio) / DIAMOND_RATIO_HALF;
-  if (vertical > 1 + 1e-9) return false;
-  const horizontalLimit = Math.pow(Math.max(0, 1 - vertical), DIAMOND_MASK_EXPONENT);
-  return horizontal <= horizontalLimit + 1e-9;
+function isGreenDiamond(placement: TilePlacement): boolean {
+  if (placement.side !== 'front') return false;
+  const centerRow = Math.ceil(DIAMOND_CENTER_T * placement.rowCount - 0.5);
+  const localRow = placement.row - (centerRow - 3);
+  if (localRow < 0 || localRow >= DIAMOND_ROW_HALF_WIDTHS.length) return false;
+  const centerColumn = placement.columnCount / 2;
+  return Math.abs(placement.column - centerColumn) <= DIAMOND_ROW_HALF_WIDTHS[localRow]!;
 }
 
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
@@ -719,10 +723,9 @@ function createRoofLevel(
       top: greenPlacements.filter(({ t }) => atValue(t, maxT)).length,
       bottom: greenPlacements.filter(({ t }) => atValue(t, minT)).length,
     };
-    diamond.userData.maskRatioHalf = DIAMOND_RATIO_HALF;
-    diamond.userData.maskTHalf = DIAMOND_T_HALF;
     diamond.userData.maskCenterT = DIAMOND_CENTER_T;
-    diamond.userData.maskExponent = DIAMOND_MASK_EXPONENT;
+    diamond.userData.maskMode = 'discrete-grid';
+    diamond.userData.rowHalfWidths = [...DIAMOND_ROW_HALF_WIDTHS];
     group.add(diamond);
   }
   group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
