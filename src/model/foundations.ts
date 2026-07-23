@@ -9,6 +9,7 @@ import {
   type Material,
 } from 'three';
 import type { BuildingData } from '../data/building';
+import { createTerraceCenser } from './censer';
 import type { BuildingMaterials } from './materials';
 
 export interface FoundationResult {
@@ -154,6 +155,7 @@ export function createFoundations(data: BuildingData, materials: BuildingMateria
   terracePaving.userData.kind = 'terrace-paving';
   terrace.add(terraceWall, terraceCap, terracePaving);
   group.add(terrace);
+  group.add(createTerraceCenser(data, materials));
 
   const stairWidth = 6.4;
   const stepCount = 12;
