@@ -19,6 +19,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createDeningHall } from '../model/create-dening-hall';
 import type { InspectionLayer, QualityLevel } from '../model/types';
 import { DoorAnimationController } from './door-animation';
+import { evaluateNaturalLightCycle } from './natural-light-cycle';
 import { ORBIT_CONTROL_LIMITS } from './orbit-config';
 import { createViewPresets, type ViewPreset } from './view-presets';
 
@@ -30,6 +31,8 @@ export interface ViewerDiagnostics {
   calls: number;
   triangles: number;
   canvasVariance: number;
+  sunPhase: number;
+  sunPosition: { x: number; y: number; z: number };
 }
 
 declare global {
@@ -57,6 +60,8 @@ export class DeningHallViewer {
   private frameHandle = 0;
   private running = false;
   private firstFrame = true;
+  private lightingMode: LightingMode = 'sunny';
+  private lightCycleStart: number | undefined;
   private viewAnimation: { start: number; from: Vector3; to: Vector3; targetFrom: Vector3; targetTo: Vector3 } | undefined;
 
   constructor(private readonly canvas: HTMLCanvasElement, quality: QualityLevel) {
@@ -117,7 +122,15 @@ export class DeningHallViewer {
     this.controls.target.copy(presets.front.target);
     this.controls.update();
 
-    this.diagnostics = { quality, frames: 0, calls: 0, triangles: 0, canvasVariance: 0 };
+    this.diagnostics = {
+      quality,
+      frames: 0,
+      calls: 0,
+      triangles: 0,
+      canvasVariance: 0,
+      sunPhase: 0,
+      sunPosition: { x: -42, y: 66, z: 48 },
+    };
     window.__DENING_DIAGNOSTICS__ = this.diagnostics;
     this.resize();
     window.addEventListener('resize', this.resize);
@@ -177,18 +190,19 @@ export class DeningHallViewer {
   }
 
   setLighting(mode: LightingMode): void {
+    this.lightingMode = mode;
     if (mode === 'survey') {
       this.scene.background = new Color(0xd2d1c8);
       this.scene.fog = new Fog(0xd2d1c8, 120, 210);
+      this.sunnyLight.position.set(-42, 66, 48);
       this.sunnyLight.intensity = 2.25;
       this.sunnyLight.color.set(0xffffff);
       this.fillLight.intensity = 3.1;
+      this.diagnostics.sunPosition = { x: -42, y: 66, z: 48 };
     } else {
       this.scene.background = new Color(0xa9c4c3);
       this.scene.fog = new Fog(0xa9c4c3, 105, 190);
-      this.sunnyLight.intensity = 3.6;
-      this.sunnyLight.color.set(0xfff0d1);
-      this.fillLight.intensity = 2.25;
+      this.applyNaturalLight(performance.now());
     }
   }
 
@@ -241,6 +255,17 @@ export class DeningHallViewer {
     this.start();
   };
 
+  private applyNaturalLight(time: number): void {
+    this.lightCycleStart ??= time;
+    const state = evaluateNaturalLightCycle(time - this.lightCycleStart);
+    this.sunnyLight.position.set(state.position.x, state.position.y, state.position.z);
+    this.sunnyLight.intensity = state.intensity;
+    this.sunnyLight.color.set(state.color);
+    this.fillLight.intensity = state.fillIntensity;
+    this.diagnostics.sunPhase = state.phase;
+    this.diagnostics.sunPosition = { ...state.position };
+  }
+
   private readonly renderFrame = (time: number): void => {
     if (!this.running) return;
     if (this.viewAnimation) {
@@ -250,6 +275,7 @@ export class DeningHallViewer {
       this.controls.target.lerpVectors(this.viewAnimation.targetFrom, this.viewAnimation.targetTo, eased);
       if (progress >= 1) this.viewAnimation = undefined;
     }
+    if (this.lightingMode === 'sunny') this.applyNaturalLight(time);
     this.doorAnimation.update(time);
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
