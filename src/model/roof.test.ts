@@ -13,8 +13,8 @@ import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 describe('hip ridge alignment', () => {
   it('uses gray roof surfaces and tiles with green diamond tiles and glazed ridges', () => {
     const materials = createBuildingMaterials(DENING_HALL);
-    expect(materials.roofSurface.color.getHex()).toBe(0x4f534f);
-    expect(materials.tile.color.getHex()).toBe(0x44443f);
+    expect(materials.roofSurface.color.getHex()).toBe(0x92948e);
+    expect(materials.tile.color.getHex()).toBe(0x7b7c76);
     expect(materials.tileRib.color.getHex()).toBe(0x565852);
     expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
     expect(materials.glazedGreen.color.getHex()).toBe(0x255942);
