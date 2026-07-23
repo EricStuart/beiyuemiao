@@ -87,14 +87,26 @@ function profileY(t: number, dimensions: RoofDimensions): number {
   );
 }
 
-function createRoofSurface(dimensions: RoofDimensions, material: Material, segments: number): Mesh {
+function createRoofSurface(
+  dimensions: RoofDimensions,
+  material: MeshStandardMaterial,
+  edgeColor: Color,
+  segments: number,
+): Mesh {
   const vertices: number[] = [];
+  const colors: number[] = [];
   const indices: number[] = [];
   const halfWidth = dimensions.width / 2;
   const halfDepth = dimensions.depth / 2;
   const topHalfWidth = (dimensions.topWidth ?? dimensions.ridgeLength) / 2;
   const topHalfDepth = (dimensions.topDepth ?? 0) / 2;
   const across = Math.max(12, Math.round(segments * 1.6));
+  const baseColor = material.color.clone();
+  const edgeTint = edgeColor.clone();
+  edgeTint.r /= Math.max(baseColor.r, 0.000001);
+  edgeTint.g /= Math.max(baseColor.g, 0.000001);
+  edgeTint.b /= Math.max(baseColor.b, 0.000001);
+  material.vertexColors = true;
 
   const addSurface = (side: 'front' | 'back' | 'left' | 'right'): void => {
     const baseIndex = vertices.length / 3;
@@ -117,6 +129,10 @@ function createRoofSurface(dimensions: RoofDimensions, material: Material, segme
           ratio = z / Math.max(extentZ, 0.001);
         }
         vertices.push(x, profileY(t, dimensions) + evaluateWingLift(ratio, t), z);
+        const tint = Math.abs(ratio) >= 0.9 || t <= 0.065
+          ? edgeTint
+          : new Color(1, 1, 1);
+        colors.push(tint.r, tint.g, tint.b);
       }
     }
     for (let row = 0; row < segments; row += 1) {
@@ -135,10 +151,14 @@ function createRoofSurface(dimensions: RoofDimensions, material: Material, segme
 
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute('color', new Float32BufferAttribute(colors, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   const mesh = new Mesh(geometry, material);
   mesh.name = dimensions.name;
+  mesh.userData.kind = 'roof-surface';
+  mesh.userData.edgeBandColor = edgeColor.getHex();
+  mesh.userData.edgeBandMode = 'eave-and-hip-boundaries';
   return mesh;
 }
 
@@ -287,11 +307,15 @@ function createInstancedTiles(
   return mesh;
 }
 
+const DIAMOND_CENTER_T = 13 / 28;
+const DIAMOND_RATIO_HALF = (1.92 / 38) * 6;
+const DIAMOND_T_HALF = 3 / 14;
+
 function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
   if (side !== 'front') return false;
-  const centredT = Math.abs(t - 0.46) / 0.26;
-  const centredX = Math.abs(ratio) / 0.21;
-  return centredT + centredX <= 1;
+  const vertical = Math.abs(t - DIAMOND_CENTER_T) / DIAMOND_T_HALF;
+  const horizontal = Math.abs(ratio) / DIAMOND_RATIO_HALF;
+  return vertical + horizontal <= 1 + 1e-9;
 }
 
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
@@ -492,6 +516,37 @@ function createMidRidgeOrnament(
   return ornament;
 }
 
+function createRidgeEndBeast(
+  materials: BuildingMaterials,
+  level: 'lower' | 'upper',
+): Group {
+  const beast = new Group();
+  beast.name = level === 'lower' ? '下檐斜脊末端走兽' : '上檐斜脊末端走兽';
+  beast.userData.kind = 'ridge-end-beast';
+  beast.userData.level = level;
+
+  const base = new Mesh(new BoxGeometry(0.58, 0.15, 0.38), materials.glazedGreen);
+  base.userData.kind = 'ridge-end-beast-base';
+  const body = new Mesh(new SphereGeometry(0.23, 10, 8), materials.glazedGreen);
+  body.scale.set(1.25, 1.05, 0.78);
+  body.position.set(0, 0.3, 0);
+  const head = new Mesh(new SphereGeometry(0.17, 10, 8), materials.glazedGreen);
+  head.scale.set(1.18, 0.95, 0.82);
+  head.position.set(0.3, 0.48, 0);
+  const snout = new Mesh(new SphereGeometry(0.1, 9, 7), materials.yellowGlaze);
+  snout.scale.set(1.35, 0.62, 0.76);
+  snout.position.set(0.47, 0.44, 0);
+  const crest = new Mesh(new ConeGeometry(0.09, 0.34, 8), materials.glazedGreen);
+  crest.rotation.z = -0.48;
+  crest.position.set(0.14, 0.68, 0);
+  const tail = new Mesh(new ConeGeometry(0.1, 0.42, 8), materials.glazedGreen);
+  tail.rotation.z = 0.8;
+  tail.position.set(-0.3, 0.43, 0);
+  beast.add(base, body, head, snout, crest, tail);
+  beast.scale.setScalar(level === 'lower' ? 0.68 : 0.78);
+  return beast;
+}
+
 function addRidges(group: Group, dimensions: RoofDimensions, materials: BuildingMaterials): void {
   const ridgeY = dimensions.ridgeY + 0.25;
   const ridgeHalf = dimensions.ridgeLength / 2;
@@ -505,6 +560,15 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
     main.userData.kind = 'main-ridge';
     main.position.set(0, dimensions.ridgeY + mainHeight / 2, 0);
     group.add(main);
+
+    const frontBand = new Mesh(
+      new BoxGeometry(dimensions.ridgeLength - 3, 0.22, 0.08),
+      materials.yellowGlaze,
+    );
+    frontBand.name = '最高正脊正面黄琉璃饰带';
+    frontBand.userData.kind = 'main-ridge-front-band';
+    frontBand.position.set(0, dimensions.ridgeY + 0.6, 0.28);
+    group.add(frontBand);
   }
 
   if (dimensions.ridgeStyle === 'chiwen') {
@@ -543,12 +607,22 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
       group.add(hip);
 
       if (dimensions.ridgeStyle === 'chiwen' || dimensions.ridgeStyle === 'truncated') {
+        const ornamentLevel = dimensions.ridgeStyle === 'truncated' ? 'lower' : 'upper';
+        const eavePoint = hipPoints[0]!;
+        const outward = eavePoint.clone().sub(hipPoints[1]!).normalize();
+        const endBeast = createRidgeEndBeast(materials, ornamentLevel);
+        endBeast.position.copy(eavePoint).add(new Vector3(0, 0.12, 0));
+        endBeast.rotation.y = Math.atan2(-outward.z, outward.x);
+        endBeast.userData.xSide = xSide;
+        endBeast.userData.zSide = zSide;
+        endBeast.userData.facing = 'outward';
+        group.add(endBeast);
+
         const midpointIndex = Math.floor(hipPoints.length / 2);
         const midpoint = hipPoints[midpointIndex]!;
         const previous = hipPoints[Math.max(0, midpointIndex - 1)]!;
         const next = hipPoints[Math.min(hipPoints.length - 1, midpointIndex + 1)]!;
         const tangent = next.clone().sub(previous).normalize();
-        const ornamentLevel = dimensions.ridgeStyle === 'truncated' ? 'lower' : 'upper';
         const ornament = createMidRidgeOrnament(materials, ornamentLevel);
         ornament.position.copy(midpoint);
         ornament.rotation.y = Math.atan2(-tangent.z, tangent.x);
@@ -590,7 +664,12 @@ function createRoofLevel(
   group.userData.roofForm = dimensions.ridgeStyle === 'truncated' ? 'truncated-hip' : 'hip';
   group.userData.baseY = dimensions.baseY;
   group.userData.ridgeY = dimensions.ridgeY;
-  group.add(createRoofSurface(dimensions, materials.roofSurface, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
+  group.add(createRoofSurface(
+    dimensions,
+    materials.roofSurface,
+    materials.diamondTile.color,
+    quality === 'low' ? 8 : quality === 'medium' ? 12 : 16,
+  ));
   const placements = collectTilePlacements(dimensions, quality);
   group.userData.tilePlacementCounts = placements.reduce<Record<RoofSide, number>>(
     (counts, placement) => {
@@ -599,13 +678,13 @@ function createRoofLevel(
     },
     { front: 0, back: 0, left: 0, right: 0 },
   );
-  const yellowPlacements = greenDiamond ? placements.filter((placement) => !isGreenDiamond(placement)) : placements;
+  const ordinaryPlacements = greenDiamond ? placements.filter((placement) => !isGreenDiamond(placement)) : placements;
   group.add(createInstancedTiles(
-    yellowPlacements,
+    ordinaryPlacements,
     materials.tile,
     '坡面筒瓦覆盖',
     'roof-tile-covering',
-    materials.glazedGreen.color,
+    materials.diamondTile.color,
   ));
   if (greenDiamond) {
     const greenPlacements = placements.filter(isGreenDiamond);
@@ -616,7 +695,26 @@ function createRoofLevel(
       'green-diamond-tiles',
     );
     diamond.userData.face = 'front';
-    diamond.userData.maskRatioHalf = 0.21;
+    const rowCounts = new Map<string, number>();
+    greenPlacements.forEach(({ t }) => {
+      const key = t.toFixed(8);
+      rowCounts.set(key, (rowCounts.get(key) ?? 0) + 1);
+    });
+    const minRatio = Math.min(...greenPlacements.map(({ ratio }) => ratio));
+    const maxRatio = Math.max(...greenPlacements.map(({ ratio }) => ratio));
+    const minT = Math.min(...greenPlacements.map(({ t }) => t));
+    const maxT = Math.max(...greenPlacements.map(({ t }) => t));
+    const atValue = (value: number, target: number): boolean => Math.abs(value - target) < 1e-8;
+    diamond.userData.horizontalTileSpan = Math.max(...rowCounts.values());
+    diamond.userData.verticalTileRows = rowCounts.size;
+    diamond.userData.tipInstanceCounts = {
+      left: greenPlacements.filter(({ ratio }) => atValue(ratio, minRatio)).length,
+      right: greenPlacements.filter(({ ratio }) => atValue(ratio, maxRatio)).length,
+      top: greenPlacements.filter(({ t }) => atValue(t, maxT)).length,
+      bottom: greenPlacements.filter(({ t }) => atValue(t, minT)).length,
+    };
+    diamond.userData.maskRatioHalf = DIAMOND_RATIO_HALF;
+    diamond.userData.maskTHalf = DIAMOND_T_HALF;
     group.add(diamond);
   }
   group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));

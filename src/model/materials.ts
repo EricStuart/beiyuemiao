@@ -17,6 +17,7 @@ export interface BuildingMaterials {
   tileRib: MeshStandardMaterial;
   diamondTile: MeshStandardMaterial;
   glazedGreen: MeshPhysicalMaterial;
+  yellowGlaze: MeshPhysicalMaterial;
   stone: MeshStandardMaterial;
   brick: MeshStandardMaterial;
   paving: MeshStandardMaterial;
@@ -55,6 +56,13 @@ export function createBuildingMaterials(data: BuildingData): BuildingMaterials {
     clearcoat: 0.22,
     clearcoatRoughness: 0.68,
   });
+  const yellowGlaze = new MeshPhysicalMaterial({
+    color: 0xb08d3e,
+    roughness: 0.58,
+    metalness: 0.03,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.7,
+  });
   const gold = new MeshPhysicalMaterial({
     color: 0x8f6b2d,
     roughness: 0.58,
@@ -71,11 +79,12 @@ export function createBuildingMaterials(data: BuildingData): BuildingMaterials {
     tileRib,
     diamondTile,
     glazedGreen,
+    yellowGlaze,
     stone,
     brick,
     paving,
     door,
     gold,
-    all: [timber, darkTimber, paintedGreen, paintedBlue, roofSurface, tile, tileRib, diamondTile, glazedGreen, stone, brick, paving, door, gold],
+    all: [timber, darkTimber, paintedGreen, paintedBlue, roofSurface, tile, tileRib, diamondTile, glazedGreen, yellowGlaze, stone, brick, paving, door, gold],
   };
 }

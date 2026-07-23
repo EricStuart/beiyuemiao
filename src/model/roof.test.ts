@@ -18,6 +18,7 @@ describe('hip ridge alignment', () => {
     expect(materials.tileRib.color.getHex()).toBe(0x565852);
     expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
     expect(materials.glazedGreen.color.getHex()).toBe(0x255942);
+    expect(materials.yellowGlaze.color.getHex()).toBe(0xb08d3e);
     const roofHsl = materials.roofSurface.color.getHSL({ h: 0, s: 0, l: 0 });
     const ridgeHsl = materials.glazedGreen.color.getHSL({ h: 0, s: 0, l: 0 });
     expect(roofHsl.s).toBeLessThan(0.06);
@@ -69,18 +70,18 @@ describe('hip ridge alignment', () => {
       expect(covering!.userData.eaveGreenInstanceCount).toBe(118);
       expect(covering!.userData.ridgeGreenInstanceCount).toBe(112);
       expect(covering!.userData.greenEdgeInstanceCount).toBe(222);
-      expect(covering!.userData.eaveGreenColor).toBe(0x255942);
-      expect(covering!.userData.edgeGreenColor).toBe(0x255942);
+      expect(covering!.userData.eaveGreenColor).toBe(0x2f543d);
+      expect(covering!.userData.edgeGreenColor).toBe(0x2f543d);
 
       const instanceTint = new Color();
       (covering as InstancedMesh).getColorAt(0, instanceTint);
       const renderedColor = instanceTint.multiply(materials.tile.color);
-      expect(renderedColor.getHex()).toBe(materials.glazedGreen.color.getHex());
+      expect(renderedColor.getHex()).toBe(materials.diamondTile.color.getHex());
 
       const ridgeTint = new Color();
       (covering as InstancedMesh).getColorAt(39, ridgeTint);
       const renderedRidgeColor = ridgeTint.multiply(materials.tile.color);
-      expect(renderedRidgeColor.getHex()).toBe(materials.glazedGreen.color.getHex());
+      expect(renderedRidgeColor.getHex()).toBe(materials.diamondTile.color.getHex());
 
       const ordinaryTint = new Color();
       (covering as InstancedMesh).getColorAt(40, ordinaryTint);
@@ -89,15 +90,52 @@ describe('hip ridge alignment', () => {
     });
   });
 
-  it('places one muted green diamond on the centre of the upper front slope', () => {
+  it('directly colors the existing roof surface along eave and hip boundaries', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const roofs = createRoofs(DENING_HALL, materials, 'high');
+
+    expect(materials.roofSurface.vertexColors).toBe(true);
+    roofs.children.forEach((roof) => {
+      const surface = roof.children.find((child) => child.userData.kind === 'roof-surface');
+      expect(surface).toBeInstanceOf(Mesh);
+      const colorAttribute = (surface as Mesh).geometry.getAttribute('color');
+      expect(colorAttribute).toBeDefined();
+      expect(surface!.userData.edgeBandColor).toBe(0x2f543d);
+      expect(surface!.userData.edgeBandMode).toBe('eave-and-hip-boundaries');
+
+      const edgeTint = new Color().fromBufferAttribute(colorAttribute, 0);
+      const renderedEdge = edgeTint.multiply(materials.roofSurface.color);
+      expect(renderedEdge.getHex()).toBe(materials.diamondTile.color.getHex());
+
+      const interiorTint = new Color().fromBufferAttribute(colorAttribute, 229);
+      const renderedInterior = interiorTint.multiply(materials.roofSurface.color);
+      expect(renderedInterior.getHex()).toBe(materials.roofSurface.color.getHex());
+
+      const overlayObjects = roof.children.filter(
+        (child) => child.userData.kind === 'roof-surface-edge-overlay',
+      );
+      expect(overlayObjects).toHaveLength(0);
+    });
+  });
+
+  it('places one wide, low green diamond with single-tile tips', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children[1]!;
     const diamond = upper.getObjectByName('二层中央菱形绿瓦');
     expect(diamond).toBeDefined();
     expect(diamond!.userData.kind).toBe('green-diamond-tiles');
     expect(diamond!.userData.face).toBe('front');
-    expect(diamond!.userData.instanceCount).toBeGreaterThan(20);
-    expect(diamond!.userData.maskRatioHalf).toBe(0.21);
+    expect(diamond!.userData.instanceCount).toBe(43);
+    expect(diamond!.userData.horizontalTileSpan).toBe(13);
+    expect(diamond!.userData.verticalTileRows).toBe(7);
+    expect(diamond!.userData.tipInstanceCounts).toEqual({
+      left: 1,
+      right: 1,
+      top: 1,
+      bottom: 1,
+    });
+    expect(diamond!.userData.maskRatioHalf).toBeCloseTo(0.3031578947, 8);
+    expect(diamond!.userData.maskTHalf).toBeCloseTo(3 / 14, 8);
     const diamondPatch = upper.getObjectByName('二层中央菱形绿瓦底');
     expect(diamondPatch).toBeUndefined();
   });
@@ -159,6 +197,33 @@ describe('hip ridge alignment', () => {
     expect((mainRidges[0] as Mesh).geometry).not.toBeInstanceOf(CylinderGeometry);
   });
 
+  it('mounts one yellow glazed band on the front of the upper main ridge', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const roofs = createRoofs(DENING_HALL, materials, 'high');
+    const lower = roofs.children.find((child) => child.name === '下檐庑殿顶')!;
+    const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
+    const main = upper.children.find((child) => child.userData.kind === 'main-ridge')!;
+    const band = upper.children.find(
+      (child) => child.userData.kind === 'main-ridge-front-band',
+    );
+
+    expect(lower.children.some(
+      (child) => child.userData.kind === 'main-ridge-front-band',
+    )).toBe(false);
+    expect(band).toBeInstanceOf(Mesh);
+    const bandMesh = band as Mesh;
+    expect(bandMesh.geometry).toBeInstanceOf(BoxGeometry);
+    expect(bandMesh.material).toBe(materials.yellowGlaze);
+    expect(bandMesh.position.z).toBeGreaterThan(main.position.z);
+
+    const mainBounds = new Box3().setFromObject(main);
+    const bandBounds = new Box3().setFromObject(bandMesh);
+    const mainSize = mainBounds.getSize(new Vector3());
+    const bandSize = bandBounds.getSize(new Vector3());
+    expect(mainBounds.intersectsBox(bandBounds)).toBe(true);
+    expect(bandSize.x).toBeLessThan(mainSize.x);
+  });
+
   it('lowers the complete upper roof while preserving its profile', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
@@ -217,6 +282,36 @@ describe('hip ridge alignment', () => {
         new Box3().setFromObject(hip!),
       )).toBe(true);
     });
+  });
+
+  it('adds eight outward-facing beasts at the eave ends of all hip ridges', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    let totalBeasts = 0;
+
+    roofs.children.forEach((roof) => {
+      const beasts = roof.children.filter(
+        (child) => child.userData.kind === 'ridge-end-beast',
+      );
+      const hipRidges = roof.children.filter((child) => child.userData.kind === 'hip-ridge');
+      expect(beasts).toHaveLength(4);
+      totalBeasts += beasts.length;
+
+      beasts.forEach((beast) => {
+        expect(beast.userData.facing).toBe('outward');
+        expect(Math.sign(beast.position.x)).toBe(beast.userData.xSide);
+        expect(Math.sign(beast.position.z)).toBe(beast.userData.zSide);
+        const hip = hipRidges.find(
+          (candidate) => candidate.userData.xSide === beast.userData.xSide
+            && candidate.userData.zSide === beast.userData.zSide,
+        );
+        expect(hip).toBeDefined();
+        expect(new Box3().setFromObject(beast).intersectsBox(
+          new Box3().setFromObject(hip!),
+        )).toBe(true);
+      });
+    });
+
+    expect(totalBeasts).toBe(8);
   });
 
   it('uses a vertically thicker top ridge and ridge band', () => {
