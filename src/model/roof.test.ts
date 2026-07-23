@@ -11,14 +11,11 @@ import {
 import { evaluateRaisedEaveHeight, evaluateWingLift } from './roof-profile';
 
 describe('hip ridge alignment', () => {
-  it('uses dark green field tiles below the ridge and diamond greens', () => {
+  it('uses faded yellow-green field tiles with darker aged ribs', () => {
     const materials = createBuildingMaterials(DENING_HALL);
-    expect(materials.tile.color.getHex()).toBe(0x1d4436);
-    expect(materials.tileRib.color.getHex()).toBe(0x143126);
+    expect(materials.tile.color.getHex()).toBe(0x82794a);
+    expect(materials.tileRib.color.getHex()).toBe(0x5a5737);
     expect(materials.diamondTile.color.getHex()).toBe(0x2f543d);
-    const fieldLightness = materials.tile.color.getHSL({ h: 0, s: 0, l: 0 }).l;
-    expect(fieldLightness).toBeLessThan(materials.diamondTile.color.getHSL({ h: 0, s: 0, l: 0 }).l);
-    expect(fieldLightness).toBeLessThan(materials.glazedGreen.color.getHSL({ h: 0, s: 0, l: 0 }).l);
     expect(materials.tile.roughness).toBeGreaterThan(0.85);
     expect(materials.tile.vertexColors).toBe(false);
     expect(materials.diamondTile.vertexColors).toBe(false);
