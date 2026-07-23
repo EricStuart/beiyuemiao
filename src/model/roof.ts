@@ -563,7 +563,7 @@ function createRoofLevel(
   group.userData.roofForm = dimensions.ridgeStyle === 'truncated' ? 'truncated-hip' : 'hip';
   group.userData.baseY = dimensions.baseY;
   group.userData.ridgeY = dimensions.ridgeY;
-  group.add(createRoofSurface(dimensions, materials.tile, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
+  group.add(createRoofSurface(dimensions, materials.roofSurface, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
   const placements = collectTilePlacements(dimensions, quality);
   group.userData.tilePlacementCounts = placements.reduce<Record<RoofSide, number>>(
     (counts, placement) => {
