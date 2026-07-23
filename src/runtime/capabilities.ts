@@ -7,10 +7,8 @@ export interface DeviceProfile {
 }
 
 export function selectQuality(profile: DeviceProfile): QualityLevel {
-  const memory = profile.deviceMemory ?? 4;
-  if (profile.width < 560 || memory <= 2 || profile.pixelRatio > 2.5) return 'low';
-  if (profile.width >= 1200 && memory >= 8 && profile.pixelRatio <= 2) return 'high';
-  return 'medium';
+  void profile;
+  return 'high';
 }
 
 export function currentDeviceProfile(): DeviceProfile {

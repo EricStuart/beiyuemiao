@@ -21,6 +21,7 @@ import type { InspectionLayer, QualityLevel } from '../model/types';
 import { DoorAnimationController } from './door-animation';
 import { evaluateNaturalLightCycle } from './natural-light-cycle';
 import { ORBIT_CONTROL_LIMITS } from './orbit-config';
+import { createHighQualityRenderSettings } from './render-quality';
 import { createViewPresets, type ViewPreset } from './view-presets';
 
 export type LightingMode = 'sunny' | 'survey';
@@ -69,17 +70,19 @@ export class DeningHallViewer {
       this.resolveReady = resolve;
     });
 
+    const renderSettings = createHighQualityRenderSettings(window.devicePixelRatio || 1);
     this.renderer = new WebGLRenderer({
       canvas,
-      antialias: quality !== 'low',
+      antialias: renderSettings.antialias,
       alpha: false,
       powerPreference: 'high-performance',
     });
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
-    this.renderer.shadowMap.enabled = quality !== 'low';
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === 'high' ? 2 : 1.5));
+    this.renderer.shadowMap.enabled = renderSettings.shadows;
+    this.renderer.shadowMap.type = renderSettings.shadowMapType;
+    this.renderer.setPixelRatio(renderSettings.pixelRatio);
 
     this.scene = new Scene();
     this.scene.background = new Color(0xa9c4c3);
@@ -102,9 +105,8 @@ export class DeningHallViewer {
     this.fillLight = new HemisphereLight(0xd8e8e2, 0x5d5848, 2.25);
     this.sunnyLight = new DirectionalLight(0xfff0d1, 3.6);
     this.sunnyLight.position.set(-42, 66, 48);
-    this.sunnyLight.castShadow = quality !== 'low';
-    const shadowSize = quality === 'high' ? 2048 : 1024;
-    this.sunnyLight.shadow.mapSize.set(shadowSize, shadowSize);
+    this.sunnyLight.castShadow = renderSettings.shadows;
+    this.sunnyLight.shadow.mapSize.set(renderSettings.shadowMapSize, renderSettings.shadowMapSize);
     this.sunnyLight.shadow.camera.left = -62;
     this.sunnyLight.shadow.camera.right = 62;
     this.sunnyLight.shadow.camera.top = 55;
