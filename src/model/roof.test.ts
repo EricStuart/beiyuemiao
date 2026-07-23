@@ -118,16 +118,17 @@ describe('hip ridge alignment', () => {
     });
   });
 
-  it('places one wide, low green diamond with single-tile tips', () => {
+  it('places one raised, wide green diamond with visibly isolated single-tile tips', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children[1]!;
     const diamond = upper.getObjectByName('二层中央菱形绿瓦');
     expect(diamond).toBeDefined();
     expect(diamond!.userData.kind).toBe('green-diamond-tiles');
     expect(diamond!.userData.face).toBe('front');
-    expect(diamond!.userData.instanceCount).toBe(43);
+    expect(diamond!.userData.instanceCount).toBe(35);
     expect(diamond!.userData.horizontalTileSpan).toBe(13);
     expect(diamond!.userData.verticalTileRows).toBe(7);
+    expect(diamond!.userData.rowTileCounts).toEqual([1, 3, 7, 13, 7, 3, 1]);
     expect(diamond!.userData.tipInstanceCounts).toEqual({
       left: 1,
       right: 1,
@@ -136,6 +137,8 @@ describe('hip ridge alignment', () => {
     });
     expect(diamond!.userData.maskRatioHalf).toBeCloseTo(0.3031578947, 8);
     expect(diamond!.userData.maskTHalf).toBeCloseTo(3 / 14, 8);
+    expect(diamond!.userData.maskCenterT).toBeCloseTo(15 / 28, 8);
+    expect(diamond!.userData.maskExponent).toBe(1.5);
     const diamondPatch = upper.getObjectByName('二层中央菱形绿瓦底');
     expect(diamondPatch).toBeUndefined();
   });

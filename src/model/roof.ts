@@ -307,15 +307,18 @@ function createInstancedTiles(
   return mesh;
 }
 
-const DIAMOND_CENTER_T = 13 / 28;
+const DIAMOND_CENTER_T = 15 / 28;
 const DIAMOND_RATIO_HALF = (1.92 / 38) * 6;
 const DIAMOND_T_HALF = 3 / 14;
+const DIAMOND_MASK_EXPONENT = 1.5;
 
 function isGreenDiamond({ side, ratio, t }: TilePlacement): boolean {
   if (side !== 'front') return false;
   const vertical = Math.abs(t - DIAMOND_CENTER_T) / DIAMOND_T_HALF;
   const horizontal = Math.abs(ratio) / DIAMOND_RATIO_HALF;
-  return vertical + horizontal <= 1 + 1e-9;
+  if (vertical > 1 + 1e-9) return false;
+  const horizontalLimit = Math.pow(Math.max(0, 1 - vertical), DIAMOND_MASK_EXPONENT);
+  return horizontal <= horizontalLimit + 1e-9;
 }
 
 function createTileLines(dimensions: RoofDimensions, quality: QualityLevel, color: number): LineSegments {
@@ -707,6 +710,9 @@ function createRoofLevel(
     const atValue = (value: number, target: number): boolean => Math.abs(value - target) < 1e-8;
     diamond.userData.horizontalTileSpan = Math.max(...rowCounts.values());
     diamond.userData.verticalTileRows = rowCounts.size;
+    diamond.userData.rowTileCounts = [...rowCounts.entries()]
+      .sort(([left], [right]) => Number(left) - Number(right))
+      .map(([, count]) => count);
     diamond.userData.tipInstanceCounts = {
       left: greenPlacements.filter(({ ratio }) => atValue(ratio, minRatio)).length,
       right: greenPlacements.filter(({ ratio }) => atValue(ratio, maxRatio)).length,
@@ -715,6 +721,8 @@ function createRoofLevel(
     };
     diamond.userData.maskRatioHalf = DIAMOND_RATIO_HALF;
     diamond.userData.maskTHalf = DIAMOND_T_HALF;
+    diamond.userData.maskCenterT = DIAMOND_CENTER_T;
+    diamond.userData.maskExponent = DIAMOND_MASK_EXPONENT;
     group.add(diamond);
   }
   group.add(createTileLines(dimensions, quality, materials.tileRib.color.getHex()));
