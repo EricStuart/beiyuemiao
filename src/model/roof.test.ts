@@ -245,11 +245,14 @@ describe('hip ridge alignment', () => {
 
   it('lowers the complete upper roof while preserving its profile', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    const lower = roofs.children.find((child) => child.name === '下檐庑殿顶')!;
     const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
 
-    expect(UPPER_ROOF_BASE_Y).toBeCloseTo(13.5, 5);
-    expect(upper.userData.baseY).toBeCloseTo(13.5, 5);
-    expect(upper.userData.ridgeY).toBeCloseTo(DENING_HALL.upperRidgeHeight - 2.5, 5);
+    expect(lower.userData.baseY).toBeCloseTo(8.49, 5);
+    expect(lower.userData.ridgeY).toBeCloseTo(12.82, 5);
+    expect(UPPER_ROOF_BASE_Y).toBeCloseTo(13.27, 5);
+    expect(upper.userData.baseY).toBeCloseTo(13.27, 5);
+    expect(upper.userData.ridgeY).toBeCloseTo(DENING_HALL.upperRidgeHeight - 2.73, 5);
   });
 
   it('exposes the upper front eave boundary for mounted facade ornaments', () => {

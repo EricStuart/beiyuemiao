@@ -40,7 +40,10 @@ export interface RoofDimensions {
 }
 
 export const UPPER_ROOF_DROP = 2.5;
-export const UPPER_ROOF_BASE_Y = 16.0 - UPPER_ROOF_DROP;
+export const ROOF_STACK_DROP = 0.23;
+const LOWER_ROOF_BASE_Y = 8.72 - ROOF_STACK_DROP;
+const LOWER_ROOF_RIDGE_Y = 13.05 - ROOF_STACK_DROP;
+export const UPPER_ROOF_BASE_Y = 16.0 - UPPER_ROOF_DROP - ROOF_STACK_DROP;
 
 export function getUpperRoofFrontEaveZ(data: BuildingData): number {
   return (data.planDepth.value * 0.68 + 7) / 2;
@@ -66,7 +69,7 @@ export function getLowerRoofSurfaceYAtFrontZ(data: BuildingData, z: number): num
     0,
     (eaveHalfDepth - Math.abs(z)) / (eaveHalfDepth - topHalfDepth),
   ));
-  return 8.72 + evaluateRaisedEaveHeight(
+  return LOWER_ROOF_BASE_Y + evaluateRaisedEaveHeight(
     {
       run: eaveHalfDepth - topHalfDepth,
       rise: 13.05 - 8.72,
@@ -746,8 +749,8 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
         ridgeLength: data.planWidth.value * 0.73 + 1,
         topWidth: data.planWidth.value * 0.73 + 1,
         topDepth: data.planDepth.value * 0.62 + 1,
-        baseY: 8.72,
-        ridgeY: 13.05,
+        baseY: LOWER_ROOF_BASE_Y,
+        ridgeY: LOWER_ROOF_RIDGE_Y,
         eaveLift: 0.58,
         ridgeStyle: 'truncated',
       },
@@ -762,7 +765,7 @@ export function createRoofs(data: BuildingData, materials: BuildingMaterials, qu
         depth: getUpperRoofFrontEaveZ(data) * 2,
         ridgeLength: data.planWidth.value * 0.48,
         baseY: UPPER_ROOF_BASE_Y,
-        ridgeY: data.upperRidgeHeight - UPPER_ROOF_DROP,
+        ridgeY: data.upperRidgeHeight - UPPER_ROOF_DROP - ROOF_STACK_DROP,
         eaveLift: 0.72,
         ridgeStyle: 'chiwen',
       },

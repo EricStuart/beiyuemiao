@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
 import {
+  createRoofs,
   getLowerRoofSurfaceYAtFrontZ,
   getUpperRoofSurfaceYAtFrontZ,
   UPPER_ROOF_BASE_Y,
@@ -52,6 +53,25 @@ describe('lower timber frame', () => {
     lowerBrackets.forEach((bracket) => {
       expect(new Box3().setFromObject(bracket).max.y).toBeLessThan(DENING_HALL.lowerEaveHeight);
     });
+  });
+
+  it('seats the shifted lower roof directly on the highest lower brackets', () => {
+    const materials = createBuildingMaterials(DENING_HALL);
+    const { brackets } = createTimberFrame(DENING_HALL, materials);
+    const roofs = createRoofs(DENING_HALL, materials, 'high');
+    const lowerBrackets = brackets.children.filter(
+      (child) => child.userData.level === 'lower' && child.userData.kind === 'bracket',
+    );
+    const lowerRoofSurface = roofs.children[0]!.children.find(
+      (child) => child.userData.kind === 'roof-surface',
+    )!;
+    const bracketTop = Math.max(...lowerBrackets.map(
+      (bracket) => new Box3().setFromObject(bracket).max.y,
+    ));
+    const roofBottom = new Box3().setFromObject(lowerRoofSurface).min.y;
+
+    expect(roofBottom).toBeCloseTo(bracketTop, 2);
+    expect(roofBottom).toBeCloseTo(9.07, 2);
   });
 
   it('uses the same four-stage profile for lower bracket sets', () => {
@@ -333,7 +353,7 @@ describe('lower timber frame', () => {
     const plaqueBounds = new Box3().setFromObject(plaque);
     const hangerTop = new Box3().setFromObject(hanger).max.y;
 
-    expect(UPPER_ROOF_BASE_Y).toBeCloseTo(13.5, 5);
+    expect(UPPER_ROOF_BASE_Y).toBeCloseTo(13.27, 5);
     expect(upperMaxY - UPPER_ROOF_BASE_Y).toBeCloseTo(1, 2);
     expect(frameBounds.max.y).toBeLessThanOrEqual(UPPER_ROOF_BASE_Y + 0.2);
     expect(plaqueBounds.min.y).toBeLessThan(upperMaxY);

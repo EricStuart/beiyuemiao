@@ -14,6 +14,7 @@ import type { BuildingMaterials } from './materials';
 import {
   getLowerRoofSurfaceYAtFrontZ,
   getUpperRoofSurfaceYAtFrontZ,
+  ROOF_STACK_DROP,
   UPPER_ROOF_BASE_Y,
 } from './roof';
 
@@ -485,7 +486,7 @@ export function createTimberFrame(data: BuildingData, materials: BuildingMateria
   const upperRear = upperZ[0] ?? 0;
   const upperLeft = upperX[0] ?? 0;
   const upperRight = upperX.at(-1) ?? 0;
-  const upperBracketBaseY = 13.05;
+  const upperBracketBaseY = 13.05 - ROOF_STACK_DROP;
   const upperTransferFrame = createPerimeterFrame(
     '二层斗栱转换梁架',
     upperLeft,
