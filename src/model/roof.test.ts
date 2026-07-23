@@ -34,6 +34,18 @@ describe('hip ridge alignment', () => {
     });
   });
 
+  it('uses half-density tile columns on both side slopes', () => {
+    const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
+    roofs.children.forEach((roof) => {
+      expect(roof.userData.tilePlacementCounts).toEqual({
+        front: 546,
+        back: 546,
+        left: 280,
+        right: 280,
+      });
+    });
+  });
+
   it('places one muted green diamond on the centre of the upper front slope', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children[1]!;

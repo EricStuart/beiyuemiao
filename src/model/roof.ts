@@ -184,11 +184,14 @@ function collectTilePlacements(
   dimensions: RoofDimensions,
   quality: QualityLevel,
 ): TilePlacement[] {
-  const columns = quality === 'high' ? 38 : quality === 'medium' ? 28 : 18;
+  const baseColumns = quality === 'high' ? 38 : quality === 'medium' ? 28 : 18;
   const rows = quality === 'high' ? 14 : quality === 'medium' ? 11 : 8;
   const placements: TilePlacement[] = [];
 
   for (const side of ['front', 'back', 'left', 'right'] as const) {
+    const columns = side === 'left' || side === 'right'
+      ? Math.max(1, Math.floor(baseColumns / 2))
+      : baseColumns;
     for (let row = 0; row < rows; row += 1) {
       const t1 = row / rows;
       const t2 = (row + 1) / rows;
@@ -562,6 +565,13 @@ function createRoofLevel(
   group.userData.ridgeY = dimensions.ridgeY;
   group.add(createRoofSurface(dimensions, materials.tile, quality === 'low' ? 8 : quality === 'medium' ? 12 : 16));
   const placements = collectTilePlacements(dimensions, quality);
+  group.userData.tilePlacementCounts = placements.reduce<Record<RoofSide, number>>(
+    (counts, placement) => {
+      counts[placement.side] += 1;
+      return counts;
+    },
+    { front: 0, back: 0, left: 0, right: 0 },
+  );
   const yellowPlacements = greenDiamond ? placements.filter((placement) => !isGreenDiamond(placement)) : placements;
   group.add(createInstancedTiles(yellowPlacements, materials.tile, '坡面筒瓦覆盖', 'roof-tile-covering'));
   if (greenDiamond) {
