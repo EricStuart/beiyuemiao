@@ -488,11 +488,14 @@ function addRidges(group: Group, dimensions: RoofDimensions, materials: Building
   const ridgeY = dimensions.ridgeY + 0.25;
   const ridgeHalf = dimensions.ridgeLength / 2;
   if (dimensions.ridgeStyle !== 'truncated') {
-    const main = new Mesh(new CylinderGeometry(0.4, 0.48, dimensions.ridgeLength + 1.2, 12), materials.glazedGreen);
+    const mainHeight = 1.2;
+    const main = new Mesh(
+      new BoxGeometry(dimensions.ridgeLength + 1.2, mainHeight, 0.52),
+      materials.glazedGreen,
+    );
     main.name = `${dimensions.name}主脊`;
     main.userData.kind = 'main-ridge';
-    main.rotation.z = Math.PI / 2;
-    main.position.set(0, ridgeY, 0);
+    main.position.set(0, dimensions.ridgeY + mainHeight / 2, 0);
     group.add(main);
   }
 

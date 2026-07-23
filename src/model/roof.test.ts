@@ -1,4 +1,4 @@
-import { Box3, Color, CylinderGeometry, InstancedMesh, Mesh, Object3D, Vector3 } from 'three';
+import { Box3, BoxGeometry, Color, CylinderGeometry, InstancedMesh, Mesh, Object3D, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DENING_HALL } from '../data/building';
 import { createBuildingMaterials } from './materials';
@@ -135,13 +135,13 @@ describe('hip ridge alignment', () => {
   it('keeps one main ridge on the upper roof only', () => {
     const roofs = createRoofs(DENING_HALL, createBuildingMaterials(DENING_HALL), 'high');
     const upper = roofs.children.find((child) => child.name === '上檐庑殿顶')!;
-    const directCylinders = upper.children.filter(
+    const mainRidges = upper.children.filter(
       (child) => child instanceof Mesh
-        && child.geometry instanceof CylinderGeometry
         && child.userData.kind === 'main-ridge',
     );
-    expect(directCylinders).toHaveLength(1);
-    expect(directCylinders[0]!.userData.kind).toBe('main-ridge');
+    expect(mainRidges).toHaveLength(1);
+    expect((mainRidges[0] as Mesh).geometry).toBeInstanceOf(BoxGeometry);
+    expect((mainRidges[0] as Mesh).geometry).not.toBeInstanceOf(CylinderGeometry);
   });
 
   it('lowers the complete upper roof while preserving its profile', () => {
@@ -212,7 +212,7 @@ describe('hip ridge alignment', () => {
     const mainSize = new Box3().setFromObject(main).getSize(new Vector3());
     const bandSize = new Box3().setFromObject(band).getSize(new Vector3());
 
-    expect(mainSize.y).toBeGreaterThan(0.8);
+    expect(mainSize.y).toBeCloseTo(1.2, 5);
     expect(bandSize.y).toBeGreaterThan(0.7);
   });
 
@@ -279,13 +279,13 @@ describe('hip ridge alignment', () => {
     const upperChiwen = findChiwen(upperRoof);
     const mainRidge = upperRoof.children.find(
       (child) => child instanceof Mesh
-        && child.geometry instanceof CylinderGeometry
         && child.userData.kind === 'main-ridge',
     );
 
     expect(lowerChiwen).toHaveLength(0);
     expect(upperChiwen).toHaveLength(2);
     expect(mainRidge).toBeDefined();
+    expect((mainRidge as Mesh).geometry).toBeInstanceOf(BoxGeometry);
     const [left, right] = upperChiwen.sort((a, b) => a.position.x - b.position.x);
     expect(left!.position.x).toBeCloseTo(-right!.position.x, 5);
     const ridgeBounds = new Box3().setFromObject(mainRidge!);
